@@ -37,8 +37,10 @@ public class HmsApplication {
                     if (userInfo != null && !userInfo.isBlank()) {
                         String[] parts = userInfo.split(":", 2);
                         System.setProperty("spring.datasource.username", parts[0]);
+                        System.setProperty("SPRING_DATASOURCE_USERNAME", parts[0]);
                         if (parts.length > 1) {
                             System.setProperty("spring.datasource.password", parts[1]);
+                            System.setProperty("SPRING_DATASOURCE_PASSWORD", parts[1]);
                         }
                     }
 
@@ -46,11 +48,17 @@ public class HmsApplication {
                             + "?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
 
                     System.setProperty("spring.datasource.url", jdbcUrl);
+                    System.setProperty("SPRING_DATASOURCE_URL", jdbcUrl);
                     System.setProperty("spring.datasource.driver-class-name", "com.mysql.cj.jdbc.Driver");
                     System.out.println("[HMS Boot] Normalized Cloud MySQL URL: jdbc:mysql://" + host + ":" + port + "/" + db);
                 } catch (Exception e) {
                     System.err.println("[HMS Boot] Could not parse cloud DB URL: " + e.getMessage());
                 }
+            } else if (!trimmed.startsWith("jdbc:")) {
+                String jdbcUrl = "jdbc:" + trimmed;
+                System.setProperty("spring.datasource.url", jdbcUrl);
+                System.setProperty("SPRING_DATASOURCE_URL", jdbcUrl);
+                System.out.println("[HMS Boot] Prepended jdbc: prefix to URL: " + jdbcUrl);
             }
         }
     }
