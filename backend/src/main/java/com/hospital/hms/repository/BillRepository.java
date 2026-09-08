@@ -33,18 +33,24 @@ public interface BillRepository extends JpaRepository<Bill, Long> {
     @Query("SELECT COALESCE(SUM(b.totalAmount), 0) FROM Bill b WHERE b.paymentStatus = 'PAID'")
     BigDecimal sumTotalPaidRevenue();
 
-    @Query("SELECT b FROM Bill b WHERE " +
-           "(:patientId IS NULL OR b.patient.id = :patientId) AND " +
+    @Query("SELECT b FROM Bill b JOIN FETCH b.patient p JOIN FETCH p.user pu LEFT JOIN FETCH b.appointment a LEFT JOIN FETCH a.doctor d LEFT JOIN FETCH d.user du WHERE b.paymentStatus = :status ORDER BY b.id DESC")
+    List<Bill> findTop5ByPaymentStatusWithDetails(@Param("status") PaymentStatus status, org.springframework.data.domain.Pageable pageable);
+
+    @Query("SELECT b FROM Bill b JOIN FETCH b.patient p JOIN FETCH p.user pu LEFT JOIN FETCH b.appointment a LEFT JOIN FETCH a.doctor d LEFT JOIN FETCH d.user du ORDER BY b.id DESC")
+    List<Bill> findTop5RecentWithDetails(org.springframework.data.domain.Pageable pageable);
+
+    @Query("SELECT b FROM Bill b JOIN FETCH b.patient p JOIN FETCH p.user pu LEFT JOIN FETCH b.appointment a WHERE " +
+           "(:patientId IS NULL OR p.id = :patientId) AND " +
            "(:paymentStatus IS NULL OR b.paymentStatus = :paymentStatus) AND " +
            "(:startDate IS NULL OR b.billingDate >= :startDate) AND " +
            "(:endDate IS NULL OR b.billingDate <= :endDate) AND " +
            "(:search IS NULL OR :search = '' OR " +
            "LOWER(b.billNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(b.patient.user.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(b.patient.user.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(CONCAT(b.patient.user.firstName, ' ', b.patient.user.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(b.patient.user.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "b.patient.user.phone LIKE CONCAT('%', :search, '%')) " +
+           "LOWER(pu.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(pu.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(CONCAT(pu.firstName, ' ', pu.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(pu.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "pu.phone LIKE CONCAT('%', :search, '%')) " +
            "ORDER BY b.billingDate DESC")
     List<Bill> searchAndFilter(
             @Param("search") String search,

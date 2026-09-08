@@ -25,34 +25,36 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
     @Query("SELECT DISTINCT d.specialization FROM Doctor d WHERE d.specialization IS NOT NULL ORDER BY d.specialization")
     List<String> findDistinctSpecializations();
 
-    @Query("SELECT d FROM Doctor d WHERE " +
+    @Query("SELECT d FROM Doctor d JOIN FETCH d.user u WHERE " +
            "(:search IS NULL OR :search = '' OR " +
-           "LOWER(d.user.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(d.user.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(CONCAT(d.user.firstName, ' ', d.user.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(d.user.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(d.specialization) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
            "(:specialization IS NULL OR :specialization = '' OR LOWER(d.specialization) = LOWER(:specialization)) AND " +
-           "(:status IS NULL OR d.status = :status)")
+           "(:status IS NULL OR d.status = :status) " +
+           "ORDER BY d.id DESC")
     List<Doctor> searchAndFilter(
             @Param("search") String search,
             @Param("specialization") String specialization,
             @Param("status") DoctorStatus status);
 
-    @Query("SELECT d FROM Doctor d WHERE " +
+    @Query("SELECT d FROM Doctor d JOIN FETCH d.user u WHERE " +
            "(:name IS NULL OR :name = '' OR " +
-           "LOWER(d.user.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR " +
-           "LOWER(d.user.lastName) LIKE LOWER(CONCAT('%', :name, '%')) OR " +
-           "LOWER(CONCAT(d.user.firstName, ' ', d.user.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
+           "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :name, '%')) OR " +
+           "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :name, '%')) OR " +
+           "LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
            "(:specialization IS NULL OR :specialization = '' OR LOWER(d.specialization) = LOWER(:specialization)) AND " +
            "(:minExperience IS NULL OR d.experienceYears >= :minExperience) AND " +
            "(:status IS NULL OR d.status = :status) AND " +
            "(:search IS NULL OR :search = '' OR " +
-           "LOWER(d.user.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(d.user.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(CONCAT(d.user.firstName, ' ', d.user.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(d.user.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(d.specialization) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(d.specialization) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "ORDER BY d.id DESC")
     List<Doctor> searchAndFilterAdvanced(
             @Param("search") String search,
             @Param("name") String name,

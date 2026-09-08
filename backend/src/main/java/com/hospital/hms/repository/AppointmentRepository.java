@@ -14,15 +14,19 @@ import java.util.List;
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
-    List<Appointment> findByPatientIdOrderByAppointmentDateDescAppointmentTimeDesc(Long patientId);
+    @Query("SELECT a FROM Appointment a JOIN FETCH a.patient p JOIN FETCH p.user pu JOIN FETCH a.doctor d JOIN FETCH d.user du WHERE p.id = :patientId ORDER BY a.appointmentDate DESC, a.appointmentTime DESC")
+    List<Appointment> findByPatientIdOrderByAppointmentDateDescAppointmentTimeDesc(@Param("patientId") Long patientId);
 
-    List<Appointment> findByDoctorIdOrderByAppointmentDateDescAppointmentTimeDesc(Long doctorId);
+    @Query("SELECT a FROM Appointment a JOIN FETCH a.patient p JOIN FETCH p.user pu JOIN FETCH a.doctor d JOIN FETCH d.user du WHERE d.id = :doctorId ORDER BY a.appointmentDate DESC, a.appointmentTime DESC")
+    List<Appointment> findByDoctorIdOrderByAppointmentDateDescAppointmentTimeDesc(@Param("doctorId") Long doctorId);
 
     List<Appointment> findByDoctorIdAndAppointmentDate(Long doctorId, LocalDate appointmentDate);
 
-    List<Appointment> findByDoctorIdAndAppointmentDateOrderByAppointmentTimeAsc(Long doctorId, LocalDate appointmentDate);
+    @Query("SELECT a FROM Appointment a JOIN FETCH a.patient p JOIN FETCH p.user pu JOIN FETCH a.doctor d JOIN FETCH d.user du WHERE d.id = :doctorId AND a.appointmentDate = :appointmentDate ORDER BY a.appointmentTime ASC")
+    List<Appointment> findByDoctorIdAndAppointmentDateOrderByAppointmentTimeAsc(@Param("doctorId") Long doctorId, @Param("appointmentDate") LocalDate appointmentDate);
 
-    List<Appointment> findByAppointmentDateOrderByAppointmentTimeAsc(LocalDate appointmentDate);
+    @Query("SELECT a FROM Appointment a JOIN FETCH a.patient p JOIN FETCH p.user pu JOIN FETCH a.doctor d JOIN FETCH d.user du WHERE a.appointmentDate = :appointmentDate ORDER BY a.appointmentTime ASC")
+    List<Appointment> findByAppointmentDateOrderByAppointmentTimeAsc(@Param("appointmentDate") LocalDate appointmentDate);
 
     List<Appointment> findByDoctorIdAndAppointmentDateAndStatusNot(Long doctorId, LocalDate appointmentDate, AppointmentStatus status);
 
@@ -49,12 +53,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     List<Appointment> findByDoctorIdAndAppointmentDateGreaterThanEqualOrderByAppointmentDateAscAppointmentTimeAsc(Long doctorId, LocalDate appointmentDate);
 
-    @Query("SELECT a FROM Appointment a WHERE a.doctor.id = :doctorId AND a.appointmentDate >= :date AND a.status NOT IN ('CANCELLED', 'COMPLETED') ORDER BY a.appointmentDate ASC, a.appointmentTime ASC")
+    @Query("SELECT a FROM Appointment a JOIN FETCH a.patient p JOIN FETCH p.user pu JOIN FETCH a.doctor d JOIN FETCH d.user du WHERE a.doctor.id = :doctorId AND a.appointmentDate >= :date AND a.status NOT IN ('CANCELLED', 'COMPLETED') ORDER BY a.appointmentDate ASC, a.appointmentTime ASC")
     List<Appointment> findUpcomingByDoctorId(@Param("doctorId") Long doctorId, @Param("date") LocalDate date);
 
     List<Appointment> findByPatientIdAndAppointmentDateGreaterThanEqualOrderByAppointmentDateAscAppointmentTimeAsc(Long patientId, LocalDate appointmentDate);
 
-    @Query("SELECT a FROM Appointment a WHERE a.patient.id = :patientId AND a.appointmentDate >= :date AND a.status NOT IN ('CANCELLED', 'COMPLETED') ORDER BY a.appointmentDate ASC, a.appointmentTime ASC")
+    @Query("SELECT a FROM Appointment a JOIN FETCH a.patient p JOIN FETCH p.user pu JOIN FETCH a.doctor d JOIN FETCH d.user du WHERE a.patient.id = :patientId AND a.appointmentDate >= :date AND a.status NOT IN ('CANCELLED', 'COMPLETED') ORDER BY a.appointmentDate ASC, a.appointmentTime ASC")
     List<Appointment> findUpcomingByPatientId(@Param("patientId") Long patientId, @Param("date") LocalDate date);
 
     List<Appointment> findTop5ByOrderByAppointmentDateDescAppointmentTimeDesc();
@@ -68,19 +72,19 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     boolean existsByDoctorIdAndAppointmentDateAndAppointmentTimeAndStatusNotAndIdNot(
             Long doctorId, LocalDate appointmentDate, LocalTime appointmentTime, AppointmentStatus status, Long id);
 
-    @Query("SELECT a FROM Appointment a WHERE " +
-           "(:patientId IS NULL OR a.patient.id = :patientId) AND " +
-           "(:doctorId IS NULL OR a.doctor.id = :doctorId) AND " +
+    @Query("SELECT a FROM Appointment a JOIN FETCH a.patient p JOIN FETCH p.user pu JOIN FETCH a.doctor d JOIN FETCH d.user du WHERE " +
+           "(:patientId IS NULL OR p.id = :patientId) AND " +
+           "(:doctorId IS NULL OR d.id = :doctorId) AND " +
            "(:status IS NULL OR a.status = :status) AND " +
            "(:date IS NULL OR a.appointmentDate = :date) AND " +
            "(:search IS NULL OR :search = '' OR " +
-           "LOWER(a.patient.user.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(a.patient.user.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(CONCAT(a.patient.user.firstName, ' ', a.patient.user.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(a.doctor.user.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(a.doctor.user.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(CONCAT(a.doctor.user.firstName, ' ', a.doctor.user.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(a.doctor.specialization) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(pu.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(pu.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(CONCAT(pu.firstName, ' ', pu.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(du.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(du.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(CONCAT(du.firstName, ' ', du.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "LOWER(d.specialization) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(a.reason) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
            "LOWER(a.notes) LIKE LOWER(CONCAT('%', :search, '%'))) " +
            "ORDER BY a.appointmentDate DESC, a.appointmentTime DESC")

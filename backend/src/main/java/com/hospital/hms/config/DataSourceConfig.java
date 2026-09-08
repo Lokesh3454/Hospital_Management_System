@@ -107,11 +107,22 @@ public class DataSourceConfig {
         config.setPassword(password);
         config.setDriverClassName(driverClassName != null && !driverClassName.isBlank() ? driverClassName : "com.mysql.cj.jdbc.Driver");
         config.setMaximumPoolSize(10);
-        config.setMinimumIdle(2);
-        config.setIdleTimeout(300000);
-        config.setMaxLifetime(1200000);
+        config.setMinimumIdle(10);
+        config.setIdleTimeout(600000);
+        config.setMaxLifetime(1800000);
         config.setConnectionTimeout(20000);
-        config.setConnectionTestQuery("SELECT 1");
+
+        // High-performance MySQL connection flags
+        config.addDataSourceProperty("cachePrepStmts", "true");
+        config.addDataSourceProperty("prepStmtCacheSize", "250");
+        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        config.addDataSourceProperty("useServerPrepStmts", "true");
+        config.addDataSourceProperty("useLocalSessionState", "true");
+        config.addDataSourceProperty("rewriteBatchedStatements", "true");
+        config.addDataSourceProperty("cacheResultSetMetadata", "true");
+        config.addDataSourceProperty("cacheServerConfiguration", "true");
+        config.addDataSourceProperty("elideSetAutoCommits", "true");
+        config.addDataSourceProperty("maintainTimeStats", "false");
 
         return new HikariDataSource(config);
     }

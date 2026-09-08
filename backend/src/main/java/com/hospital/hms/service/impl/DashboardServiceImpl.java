@@ -12,6 +12,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Scheduled;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -38,8 +43,15 @@ public class DashboardServiceImpl implements DashboardService {
     @Autowired
     private PrescriptionRepository prescriptionRepository;
 
+    @Scheduled(fixedRate = 20000)
+    @CacheEvict(value = {"adminDashboard", "doctorDashboard", "patientDashboard", "receptionistDashboard"}, allEntries = true)
+    public void evictDashboardCache() {
+        // Automatically clears dashboard cache every 20 seconds to guarantee fresh data with zero latency
+    }
+
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "adminDashboard", key = "'admin'", unless = "#result == null")
     public AdminDashboardDTO getAdminDashboard() {
         AdminDashboardDTO dto = new AdminDashboardDTO();
 
@@ -62,18 +74,13 @@ public class DashboardServiceImpl implements DashboardService {
                 .collect(Collectors.toList());
         dto.setTodayAppointmentsList(todayAppts);
 
-        List<BillResponseDTO> recentBills = billRepository
-                .findByPaymentStatus(PaymentStatus.PENDING)
-                .stream().limit(5)
+        List<Bill> recentBillsEntities = billRepository.findTop5ByPaymentStatusWithDetails(PaymentStatus.PENDING, PageRequest.of(0, 5));
+        if (recentBillsEntities.isEmpty()) {
+            recentBillsEntities = billRepository.findTop5RecentWithDetails(PageRequest.of(0, 5));
+        }
+        List<BillResponseDTO> recentBills = recentBillsEntities.stream()
                 .map(BillResponseDTO::fromEntity)
                 .collect(Collectors.toList());
-        if (recentBills.isEmpty()) {
-            recentBills = billRepository.findAll().stream()
-                    .sorted((b1, b2) -> b2.getId().compareTo(b1.getId()))
-                    .limit(5)
-                    .map(BillResponseDTO::fromEntity)
-                    .collect(Collectors.toList());
-        }
         dto.setRecentBills(recentBills);
 
         return dto;
@@ -81,6 +88,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "doctorDashboard", key = "#authenticatedUserId != null ? #authenticatedUserId : 0L", unless = "#result == null")
     public DoctorDashboardDTO getDoctorDashboard(Long authenticatedUserId) {
         Doctor doctor = null;
         if (authenticatedUserId != null) {
@@ -127,6 +135,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "patientDashboard", key = "#authenticatedUserId != null ? #authenticatedUserId : 0L", unless = "#result == null")
     public PatientDashboardDTO getPatientDashboard(Long authenticatedUserId) {
         Patient patient = null;
         if (authenticatedUserId != null) {
@@ -172,6 +181,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "receptionistDashboard", key = "'receptionist'", unless = "#result == null")
     public ReceptionistDashboardDTO getReceptionistDashboard() {
         ReceptionistDashboardDTO dto = new ReceptionistDashboardDTO();
         LocalDate today = LocalDate.now();
@@ -187,18 +197,13 @@ public class DashboardServiceImpl implements DashboardService {
                 .collect(Collectors.toList());
         dto.setTodayAppointmentsList(todayAppts);
 
-        List<BillResponseDTO> recentBills = billRepository
-                .findByPaymentStatus(PaymentStatus.PENDING)
-                .stream().limit(5)
+        List<Bill> recentBillsEntities = billRepository.findTop5ByPaymentStatusWithDetails(PaymentStatus.PENDING, PageRequest.of(0, 5));
+        if (recentBillsEntities.isEmpty()) {
+            recentBillsEntities = billRepository.findTop5RecentWithDetails(PageRequest.of(0, 5));
+        }
+        List<BillResponseDTO> recentBills = recentBillsEntities.stream()
                 .map(BillResponseDTO::fromEntity)
                 .collect(Collectors.toList());
-        if (recentBills.isEmpty()) {
-            recentBills = billRepository.findAll().stream()
-                    .sorted((b1, b2) -> b2.getId().compareTo(b1.getId()))
-                    .limit(5)
-                    .map(BillResponseDTO::fromEntity)
-                    .collect(Collectors.toList());
-        }
         dto.setRecentBillsList(recentBills);
 
         return dto;

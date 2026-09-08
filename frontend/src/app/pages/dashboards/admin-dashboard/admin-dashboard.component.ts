@@ -28,11 +28,13 @@ export class AdminDashboardComponent implements OnInit {
     this.loadDashboardData();
   }
 
-  loadDashboardData(): void {
-    this.isLoading = true;
+  loadDashboardData(forceRefresh = false): void {
+    if (!this.dashboard || forceRefresh) {
+      this.isLoading = true;
+    }
     this.errorMessage = '';
 
-    this.dashboardService.getAdminDashboard().subscribe({
+    this.dashboardService.getAdminDashboard(forceRefresh).subscribe({
       next: (data) => {
         this.dashboard = data;
         this.isLoading = false;
