@@ -1,0 +1,15 @@
+<div class="app-shell">
+  <app-navbar></app-navbar>
+  <div class="app-body">
+    <!-- Mobile Backdrop overlay when sidebar drawer is open -->
+    <div class="sidebar-backdrop d-lg-none" 
+         *ngIf="authService.isLoggedIn() && sidebarService.isMobileOpen()" 
+         (click)="sidebarService.close()"
+         aria-hidden="true"></div>
+
+    <app-sidebar *ngIf="authService.isLoggedIn()"></app-sidebar>
+    <main class="flex-grow-1 bg-light main-content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

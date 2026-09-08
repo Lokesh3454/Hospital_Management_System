@@ -1,0 +1,26 @@
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.slot-btn {
+  font-size: 0.82rem;
+  padding: 8px 10px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+@media print {
+  .btn, .breadcrumb, nav, .modal {
+    display: none !important;
+  }
+}

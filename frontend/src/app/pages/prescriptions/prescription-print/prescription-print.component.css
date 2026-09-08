@@ -1,0 +1,30 @@
+.prescription-sheet {
+  max-width: 850px;
+  min-height: 1000px;
+}
+
+.hospital-logo-badge {
+  width: 64px;
+  height: 64px;
+}
+
+.rx-symbol {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+  .d-print-none {
+    display: none !important;
+  }
+  .prescription-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}

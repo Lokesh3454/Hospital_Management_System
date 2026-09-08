@@ -1,0 +1,181 @@
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-9 col-xl-8">
+      <!-- Breadcrumb & Back -->
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <a routerLink="/bills" class="btn btn-link text-decoration-none text-secondary p-0">
+          <i class="bi bi-arrow-left me-1"></i> Back to Invoices
+        </a>
+        <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">
+          {{ isEditMode ? 'Edit Invoice #' + billId : 'New Invoice Generation' }}
+        </span>
+      </div>
+
+      <div class="card border-0 rounded-4 shadow-sm p-4 p-md-5">
+        <!-- Title -->
+        <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+          <div class="bg-success-subtle text-success p-3 rounded-4">
+            <i class="bi bi-receipt-cutoff fs-2"></i>
+          </div>
+          <div>
+            <h3 class="fw-bold text-dark mb-1">
+              {{ isEditMode ? 'Update Hospital Bill' : 'Generate Hospital Bill' }}
+            </h3>
+            <p class="text-muted mb-0">Itemize medical charges, consultation fees, and diagnostic costs.</p>
+          </div>
+        </div>
+
+        <!-- Alert Error -->
+        <div *ngIf="errorMessage" class="alert alert-danger rounded-3 mb-4">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
+        </div>
+
+        <form [formGroup]="billForm" (ngSubmit)="onSubmit()">
+          <!-- Section 1: Patient & Encounter Context -->
+          <h5 class="fw-bold text-dark mb-3">1. Patient & Encounter Details</h5>
+          <div class="row g-3 mb-4">
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-bold text-secondary">
+                Patient <span class="text-danger">*</span>
+              </label>
+              <select class="form-select rounded-3" formControlName="patientId"
+                      [ngClass]="{'is-invalid': billForm.get('patientId')?.touched && billForm.get('patientId')?.invalid}">
+                <option value="" disabled>Select patient...</option>
+                <option *ngFor="let p of patients" [value]="p.id">
+                  {{ p.name }} (ID: {{ p.id }}) - {{ p.phone || p.email }}
+                </option>
+              </select>
+              <div class="invalid-feedback">Please select a patient.</div>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label class="form-label small fw-bold text-secondary">
+                Associated Appointment (Optional)
+              </label>
+              <select class="form-select rounded-3" formControlName="appointmentId">
+                <option [ngValue]="null">No direct appointment link</option>
+                <option *ngFor="let a of appointments" [value]="a.id">
+                  #{{ a.id }} - Dr. {{ a.doctorName }} ({{ a.appointmentDate }} {{ a.appointmentTime }})
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Section 2: Itemized Charges Breakdown -->
+          <h5 class="fw-bold text-dark mb-3">2. Itemized Fee Breakdown</h5>
+          <div class="row g-3 mb-4">
+            <div class="col-12 col-sm-6">
+              <div class="p-3 rounded-4 bg-light border">
+                <label class="form-label small fw-bold text-secondary mb-1">
+                  <i class="bi bi-person-badge text-primary me-1"></i> Consultation Fee ($)
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-white border-end-0">$</span>
+                  <input type="number" step="0.01" class="form-control border-start-0" formControlName="consultationFee" min="0">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <div class="p-3 rounded-4 bg-light border">
+                <label class="form-label small fw-bold text-secondary mb-1">
+                  <i class="bi bi-capsule text-danger me-1"></i> Medicine Charges ($)
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-white border-end-0">$</span>
+                  <input type="number" step="0.01" class="form-control border-start-0" formControlName="medicineCharges" min="0">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <div class="p-3 rounded-4 bg-light border">
+                <label class="form-label small fw-bold text-secondary mb-1">
+                  <i class="bi bi-clipboard2-pulse text-info me-1"></i> Diagnostic & Lab Tests ($)
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-white border-end-0">$</span>
+                  <input type="number" step="0.01" class="form-control border-start-0" formControlName="testCharges" min="0">
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <div class="p-3 rounded-4 bg-light border">
+                <label class="form-label small fw-bold text-secondary mb-1">
+                  <i class="bi bi-plus-slash-minus text-warning me-1"></i> Other / Misc Charges ($)
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-white border-end-0">$</span>
+                  <input type="number" step="0.01" class="form-control border-start-0" formControlName="otherCharges" min="0">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Amount Callout Card -->
+          <div class="card border-0 rounded-4 bg-success-subtle p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <span class="badge bg-success text-white fw-bold mb-1">Automatic Calculation</span>
+                <h5 class="fw-bold text-success-emphasis mb-0">Total Due Amount</h5>
+                <small class="text-muted">Consultation + Medicine + Test + Other</small>
+              </div>
+              <div class="text-end">
+                <div class="display-6 fw-bold text-success">
+                  ${{ computedTotal | number:'1.2-2' }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Payment & Dates -->
+          <h5 class="fw-bold text-dark mb-3">3. Payment & Settlement Status</h5>
+          <div class="row g-3 mb-4">
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-bold text-secondary">Payment Status</label>
+              <select class="form-select rounded-3" formControlName="paymentStatus">
+                <option value="PENDING">PENDING</option>
+                <option value="PAID">PAID</option>
+                <option value="CANCELLED">CANCELLED</option>
+              </select>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-bold text-secondary">Payment Method</label>
+              <select class="form-select rounded-3" formControlName="paymentMethod">
+                <option value="">None / Awaiting Payment</option>
+                <option value="CASH">CASH</option>
+                <option value="CARD">CARD</option>
+                <option value="UPI">UPI</option>
+              </select>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <label class="form-label small fw-bold text-secondary">Billing Date</label>
+              <input type="date" class="form-control rounded-3" formControlName="billDate">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small fw-bold text-secondary">Notes & Remarks</label>
+              <textarea class="form-control rounded-3" rows="3" formControlName="notes"
+                        placeholder="Internal billing remarks, policy details, or receipt notes..."></textarea>
+            </div>
+          </div>
+
+          <!-- Submit Buttons -->
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a routerLink="/bills" class="btn btn-light border px-4 rounded-pill">
+              Cancel
+            </a>
+            <button type="submit" class="btn btn-success px-5 rounded-pill fw-semibold shadow-sm" [disabled]="isSubmitting">
+              <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
+              <i *ngIf="!isSubmitting" class="bi bi-check2-circle me-1"></i>
+              {{ isEditMode ? 'Save Changes' : 'Generate Bill' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

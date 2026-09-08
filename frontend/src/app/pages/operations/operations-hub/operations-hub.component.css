@@ -1,0 +1,75 @@
+.bg-gradient-operations {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%);
+}
+
+.op-card {
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  background-color: #ffffff;
+}
+
+.op-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12) !important;
+}
+
+.op-card:active {
+  transform: translateY(-2px);
+}
+
+.op-icon-box {
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+}
+
+.bg-purple {
+  background-color: #7c3aed !important;
+}
+
+.bg-purple-subtle {
+  background-color: #ede9fe !important;
+}
+
+.text-purple {
+  color: #7c3aed !important;
+}
+
+.btn-purple {
+  background-color: #7c3aed !important;
+  color: #ffffff !important;
+}
+
+.btn-purple:hover {
+  background-color: #6d28d9 !important;
+  color: #ffffff !important;
+}
+
+.border-purple {
+  border-color: #7c3aed !important;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.modal-backdrop.show {
+  opacity: 0.6;
+  background-color: #0f172a;
+  z-index: 1050;
+}
+
+.modal.show.d-block {
+  z-index: 1055;
+  background-color: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}

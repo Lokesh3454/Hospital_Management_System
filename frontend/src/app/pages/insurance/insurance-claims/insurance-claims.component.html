@@ -1,0 +1,317 @@
+<div class="container-fluid py-4 insurance-wrapper">
+  <!-- Breadcrumbs & Header -->
+  <div class="row align-items-center mb-4">
+    <div class="col-md-7">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a [routerLink]="authService.getDashboardRouteForUser()" class="text-decoration-none">Dashboard</a></li>
+          <li class="breadcrumb-item"><a routerLink="/operations" class="text-decoration-none">Operations Hub</a></li>
+          <li class="breadcrumb-item active text-primary fw-semibold" aria-current="page">Insurance & TPA Claims</li>
+        </ol>
+      </nav>
+      <h2 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+        <i class="bi bi-shield-check text-primary fs-2"></i>
+        Insurance & TPA Pre-Authorization Desk
+      </h2>
+      <p class="text-muted small mb-0">Cashless claim approval workflows, ICD-10 coding, policy verification, and automated 10% co-pay calculations</p>
+    </div>
+
+    <div class="col-md-5 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end gap-2">
+      <button class="btn btn-outline-primary d-flex align-items-center gap-2" (click)="loadClaims()">
+        <i class="bi bi-arrow-clockwise" [class.spin]="isLoading"></i> Refresh Claims
+      </button>
+      <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" (click)="openNewClaimModal()">
+        <i class="bi bi-file-earmark-plus-fill"></i> New Pre-Auth Claim
+      </button>
+    </div>
+  </div>
+
+  <!-- Telemetry Counter Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold text-uppercase">Total Claim Volume</div>
+            <h3 class="fw-bold mb-0 mt-1 text-dark">₹{{ totalSubmittedAmount | number }}</h3>
+            <span class="text-muted x-small">{{ claims.length }} Total Claims</span>
+          </div>
+          <div class="stat-icon-wrapper bg-primary-subtle text-primary rounded-circle p-3">
+            <i class="bi bi-cash-coin fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100 border-start border-success border-4">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-success small fw-semibold text-uppercase">Approved Pre-Auth</div>
+            <h3 class="fw-bold mb-0 mt-1 text-success">₹{{ totalApprovedAmount | number }}</h3>
+            <span class="text-muted x-small">Secured Cashless</span>
+          </div>
+          <div class="stat-icon-wrapper bg-success-subtle text-success rounded-circle p-3">
+            <i class="bi bi-shield-fill-check fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100 border-start border-warning border-4">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-warning-emphasis small fw-semibold text-uppercase">Pending TPA Review</div>
+            <h3 class="fw-bold mb-0 mt-1 text-warning-emphasis">{{ pendingReviewCount }}</h3>
+            <span class="text-muted x-small">Awaiting Insurer Decision</span>
+          </div>
+          <div class="stat-icon-wrapper bg-warning-subtle text-warning-emphasis rounded-circle p-3">
+            <i class="bi bi-hourglass-split fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold text-uppercase">Settled Claims</div>
+            <h3 class="fw-bold mb-0 mt-1 text-info">{{ settledCount }}</h3>
+            <span class="text-muted x-small">Funds Disbursed</span>
+          </div>
+          <div class="stat-icon-wrapper bg-info-subtle text-info rounded-circle p-3">
+            <i class="bi bi-check2-all fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div *ngIf="successMessage" class="alert alert-success border-0 rounded-3 shadow-sm alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i> {{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = null"></button>
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-danger border-0 rounded-3 shadow-sm alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+  </div>
+
+  <!-- Filter Toolbar -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-9">
+        <label class="form-label small text-muted fw-semibold mb-1">Filter by Claim Status</label>
+        <div class="d-flex flex-wrap gap-1">
+          <button type="button" class="btn btn-sm" [ngClass]="selectedStatusFilter === 'ALL' ? 'btn-primary' : 'btn-outline-secondary'" (click)="selectedStatusFilter = 'ALL'">All</button>
+          <button type="button" class="btn btn-sm" [ngClass]="selectedStatusFilter === 'SUBMITTED' ? 'btn-primary' : 'btn-outline-secondary'" (click)="selectedStatusFilter = 'SUBMITTED'">Submitted</button>
+          <button type="button" class="btn btn-sm" [ngClass]="selectedStatusFilter === 'PRE_AUTH_APPROVED' ? 'btn-success' : 'btn-outline-secondary'" (click)="selectedStatusFilter = 'PRE_AUTH_APPROVED'">Pre-Auth Approved</button>
+          <button type="button" class="btn btn-sm" [ngClass]="selectedStatusFilter === 'UNDER_REVIEW' ? 'btn-warning text-dark' : 'btn-outline-secondary'" (click)="selectedStatusFilter = 'UNDER_REVIEW'">Under Review</button>
+          <button type="button" class="btn btn-sm" [ngClass]="selectedStatusFilter === 'SETTLED' ? 'btn-info text-dark' : 'btn-outline-secondary'" (click)="selectedStatusFilter = 'SETTLED'">Settled</button>
+          <button type="button" class="btn btn-sm" [ngClass]="selectedStatusFilter === 'REJECTED' ? 'btn-danger' : 'btn-outline-secondary'" (click)="selectedStatusFilter = 'REJECTED'">Rejected</button>
+        </div>
+      </div>
+
+      <div class="col-md-3 text-md-end">
+        <span class="text-muted small">Showing <strong>{{ filteredClaims.length }}</strong> claims</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading Claims...</span>
+    </div>
+    <p class="text-muted mt-2">Accessing TPA gateway records...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && filteredClaims.length === 0" class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white">
+    <div class="py-4">
+      <i class="bi bi-shield-slash fs-1 text-muted"></i>
+      <h5 class="fw-bold mt-3 text-secondary">No Insurance Claims Found</h5>
+      <p class="text-muted small">File a cashless pre-authorization request to begin.</p>
+    </div>
+  </div>
+
+  <!-- Claims Table -->
+  <div *ngIf="!isLoading && filteredClaims.length > 0" class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-uppercase small text-muted">
+          <tr>
+            <th class="ps-4">Claim & Policy #</th>
+            <th>Patient & Diagnosis (ICD-10)</th>
+            <th>Insurer / TPA</th>
+            <th>Bill & Claim Amount</th>
+            <th>Patient Co-Pay (10%)</th>
+            <th>Approved Amount</th>
+            <th>Status</th>
+            <th class="text-end pe-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of filteredClaims">
+            <td class="ps-4">
+              <div class="fw-bold text-dark font-monospace">{{ c.claimNumber }}</div>
+              <div class="text-muted x-small">Pol: {{ c.policyNumber }}</div>
+            </td>
+            <td>
+              <div class="fw-bold text-dark">{{ c.patientName }}</div>
+              <span class="badge bg-light text-secondary border mt-1">
+                {{ c.icdCode || 'ICD-10 Not Specified' }}
+              </span>
+            </td>
+            <td>
+              <div class="fw-semibold text-dark">{{ c.insuranceProvider }}</div>
+              <div class="text-muted x-small">TPA: {{ c.tpaName || 'Direct Billing' }}</div>
+            </td>
+            <td>
+              <div class="fw-semibold text-dark">₹{{ c.claimAmount | number }}</div>
+              <div class="text-muted x-small">Total Bill: ₹{{ c.totalBillAmount | number }}</div>
+            </td>
+            <td>
+              <span class="badge bg-warning-subtle text-warning-emphasis fw-bold px-2 py-1">
+                ₹{{ c.patientCoPay || 0 | number }}
+              </span>
+            </td>
+            <td>
+              <div *ngIf="c.approvedAmount" class="fw-bold text-success fs-6">
+                ₹{{ c.approvedAmount | number }}
+              </div>
+              <span *ngIf="!c.approvedAmount" class="text-muted small">Pending Decision</span>
+            </td>
+            <td>
+              <span [class]="getStatusBadgeClass(c.status)">{{ c.status }}</span>
+            </td>
+            <td class="text-end pe-4">
+              <button class="btn btn-sm btn-outline-primary" (click)="openAdjudicateModal(c)">
+                <i class="bi bi-pencil-square me-1"></i> Adjudicate
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- New Pre-Auth Claim Modal -->
+  <div *ngIf="showNewClaimModal" class="modal-backdrop-custom d-flex align-items-center justify-content-center p-3">
+    <div class="card border-0 rounded-4 shadow-lg p-4 bg-white modal-dialog-custom">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+          <i class="bi bi-shield-plus text-primary"></i> Submit Cashless Pre-Authorization
+        </h5>
+        <button type="button" class="btn-close" (click)="closeNewClaimModal()"></button>
+      </div>
+
+      <form (ngSubmit)="saveClaim()">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Patient Name *</label>
+            <input type="text" class="form-control" [(ngModel)]="newClaim.patientName" name="patientName" placeholder="e.g. Eleanor Vance" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Policy Number *</label>
+            <input type="text" class="form-control" [(ngModel)]="newClaim.policyNumber" name="policyNumber" placeholder="e.g. POL-89124501" required>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Insurance Provider *</label>
+            <select class="form-select" [(ngModel)]="newClaim.insuranceProvider" name="insuranceProvider">
+              <option value="Star Health Insurance">Star Health Insurance</option>
+              <option value="HDFC ERGO Health">HDFC ERGO Health</option>
+              <option value="Max Bupa / Niva Bupa">Max Bupa / Niva Bupa</option>
+              <option value="ICICI Lombard">ICICI Lombard</option>
+              <option value="Care Health Insurance">Care Health Insurance</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Third Party Administrator (TPA)</label>
+            <input type="text" class="form-control" [(ngModel)]="newClaim.tpaName" name="tpaName" placeholder="e.g. Medi Assist TPA">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Diagnosis (ICD-10 Code & Description)</label>
+            <select class="form-select" [(ngModel)]="newClaim.icdCode" name="icdCode">
+              <option value="I21.9 - Acute Myocardial Infarction">I21.9 - Acute Myocardial Infarction</option>
+              <option value="K80.20 - Calculus of Gallbladder (Cholelithiasis)">K80.20 - Calculus of Gallbladder (Cholelithiasis)</option>
+              <option value="S72.0 - Fracture of Femur Neck">S72.0 - Fracture of Femur Neck</option>
+              <option value="J18.9 - Pneumonia, Unspecified Organism">J18.9 - Pneumonia, Unspecified Organism</option>
+              <option value="E11.9 - Type 2 Diabetes Mellitus without Complications">E11.9 - Type 2 Diabetes Mellitus</option>
+            </select>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Estimated Total Bill (₹) *</label>
+            <input type="number" class="form-control" [(ngModel)]="newClaim.totalBillAmount" (ngModelChange)="onBillAmountChange()" name="totalBillAmount" min="1000" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Auto Co-Pay (10%) (₹)</label>
+            <input type="number" class="form-control bg-light" [value]="newClaim.patientCoPay" readonly>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Claim Amount (90%) (₹)</label>
+            <input type="number" class="form-control bg-light" [value]="newClaim.claimAmount" readonly>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Pre-Authorization Clinical Justification</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="newClaim.claimNotes" name="claimNotes"></textarea>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4 pt-2 border-top">
+          <button type="button" class="btn btn-light" (click)="closeNewClaimModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+            <i class="bi bi-send-fill me-1"></i> Transmit Pre-Auth to TPA
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Adjudicate / Update Pre-Auth Modal -->
+  <div *ngIf="showAdjudicateModal && selectedClaimForAction" class="modal-backdrop-custom d-flex align-items-center justify-content-center p-3">
+    <div class="card border-0 rounded-4 shadow-lg p-4 bg-white modal-dialog-custom">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark">
+          Adjudicate Claim: {{ selectedClaimForAction.claimNumber }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeAdjudicateModal()"></button>
+      </div>
+
+      <p class="text-muted small">
+        Patient: <strong>{{ selectedClaimForAction.patientName }}</strong> | Insurer: <strong>{{ selectedClaimForAction.insuranceProvider }}</strong>
+      </p>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">TPA Adjudication Decision</label>
+        <select class="form-select" [(ngModel)]="adjudicateStatus">
+          <option value="PRE_AUTH_APPROVED">PRE_AUTH_APPROVED (Initial Guarantee Letter Issued)</option>
+          <option value="UNDER_REVIEW">UNDER_REVIEW (Query / Medical Docs Requested)</option>
+          <option value="SETTLED">SETTLED (Final Claim Disbursed)</option>
+          <option value="REJECTED">REJECTED (Non-Covered Diagnosis / Policy Lapsed)</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Approved Coverage Amount (₹)</label>
+        <input type="number" class="form-control" [(ngModel)]="adjudicateApprovedAmount">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">TPA Remark / Query Notes</label>
+        <textarea class="form-control" rows="2" [(ngModel)]="adjudicateNotes" placeholder="e.g. Initial guarantee letter issued for ₹45,000 against ICD-10 I21.9"></textarea>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="button" class="btn btn-light" (click)="closeAdjudicateModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="saveAdjudication()">Update Pre-Auth Record</button>
+      </div>
+    </div>
+  </div>
+</div>

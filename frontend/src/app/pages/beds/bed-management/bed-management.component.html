@@ -1,0 +1,692 @@
+<div class="container-fluid py-4">
+  <!-- Header Bar -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1 small">
+          <li class="breadcrumb-item"><a [routerLink]="authService.getDashboardRouteForUser()">Dashboard</a></li>
+          <li class="breadcrumb-item"><a routerLink="/operations">Hospital Operations</a></li>
+          <li class="breadcrumb-item active">Inpatient & Bed Management</li>
+        </ol>
+      </nav>
+      <h2 class="h3 fw-bold mb-0 text-dark">
+        <i class="bi bi-hospital text-primary me-2"></i>Bed & Inpatient Ward Management
+      </h2>
+      <p class="text-muted small mb-0">Real-time occupancy tracking, patient admission, bedside telemetry, and card clinical actions</p>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button *ngIf="authService.hasRole('ROLE_ADMIN')" (click)="openNewBedModal()" class="btn btn-primary rounded-pill px-3 shadow-sm">
+        <i class="bi bi-plus-circle me-1"></i> Add Hospital Bed
+      </button>
+      <button (click)="loadBeds()" class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Notifications -->
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm mb-4">
+    <i class="bi bi-check-circle-fill me-2"></i>{{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = null"></button>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm mb-4">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+  </div>
+
+  <!-- KPI Overview Metrics (Interactive Clickable Filters) -->
+  <div class="row g-3 mb-4">
+    <!-- Total Beds Filter -->
+    <div class="col-6 col-md-3">
+      <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-start border-primary border-4 kpi-clickable"
+           [class.active-kpi]="selectedStatus === 'ALL'"
+           (click)="filterByStatus('ALL')"
+           role="button"
+           title="Click to view all beds">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Total Hospital Beds</div>
+            <div class="h3 fw-bold text-dark mb-0">{{ totalCount }}</div>
+            <span class="small text-muted">Across all specialty wings</span>
+          </div>
+          <i class="bi bi-grid fs-3 text-primary opacity-50"></i>
+        </div>
+        <div class="kpi-filter-hint mt-2 text-primary small fw-semibold">
+          <i class="bi bi-filter me-1"></i> {{ selectedStatus === 'ALL' ? 'Showing All Beds' : 'Click to Show All' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Available for Admission Filter -->
+    <div class="col-6 col-md-3">
+      <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-start border-success border-4 kpi-clickable"
+           [class.active-kpi]="selectedStatus === 'AVAILABLE'"
+           (click)="filterByStatus('AVAILABLE')"
+           role="button"
+           title="Click to filter available beds">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Available for Admission</div>
+            <div class="h3 fw-bold text-success mb-0">{{ availableCount }}</div>
+            <span class="small text-muted">Ready to admit immediately</span>
+          </div>
+          <i class="bi bi-check-circle fs-3 text-success opacity-50"></i>
+        </div>
+        <div class="kpi-filter-hint mt-2 text-success small fw-semibold">
+          <i class="bi bi-funnel-fill me-1"></i> {{ selectedStatus === 'AVAILABLE' ? 'Filtered: Available Only' : 'Click to Filter Available' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Occupied Inpatients Filter -->
+    <div class="col-6 col-md-3">
+      <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-start border-danger border-4 kpi-clickable"
+           [class.active-kpi]="selectedStatus === 'OCCUPIED'"
+           (click)="filterByStatus('OCCUPIED')"
+           role="button"
+           title="Click to filter occupied beds">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Occupied Inpatients</div>
+            <div class="h3 fw-bold text-danger mb-0">{{ occupiedCount }}</div>
+            <span class="small text-muted">{{ occupancyRate }}% Ward Occupancy Rate</span>
+          </div>
+          <i class="bi bi-person-fill fs-3 text-danger opacity-50"></i>
+        </div>
+        <div class="kpi-filter-hint mt-2 text-danger small fw-semibold">
+          <i class="bi bi-funnel-fill me-1"></i> {{ selectedStatus === 'OCCUPIED' ? 'Filtered: Occupied Only' : 'Click to Filter Occupied' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Sanitation & Cleaning Filter -->
+    <div class="col-6 col-md-3">
+      <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-start border-info border-4 kpi-clickable"
+           [class.active-kpi]="selectedStatus === 'CLEANING'"
+           (click)="filterByStatus('CLEANING')"
+           role="button"
+           title="Click to filter cleaning beds">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Sanitation & Cleaning</div>
+            <div class="h3 fw-bold text-info mb-0">{{ cleaningCount }}</div>
+            <span class="small text-muted">Disinfection in progress</span>
+          </div>
+          <i class="bi bi-droplet-fill fs-3 text-info opacity-50"></i>
+        </div>
+        <div class="kpi-filter-hint mt-2 text-info small fw-semibold">
+          <i class="bi bi-funnel-fill me-1"></i> {{ selectedStatus === 'CLEANING' ? 'Filtered: Cleaning Only' : 'Click to Filter Cleaning' }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ward Filters & Control Bar -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-sm rounded-pill px-3"
+              [ngClass]="selectedWard === 'ALL' ? 'btn-primary' : 'btn-outline-secondary'"
+              (click)="selectedWard = 'ALL'">
+        All Wards ({{ totalCount }})
+      </button>
+      <button class="btn btn-sm rounded-pill px-3"
+              [ngClass]="selectedWard === 'ICU' ? 'btn-danger' : 'btn-outline-danger'"
+              (click)="selectedWard = 'ICU'">
+        <i class="bi bi-heart-pulse me-1"></i> ICU
+      </button>
+      <button class="btn btn-sm rounded-pill px-3"
+              [ngClass]="selectedWard === 'EMERGENCY' ? 'btn-warning text-dark' : 'btn-outline-warning'"
+              (click)="selectedWard = 'EMERGENCY'">
+        <i class="bi bi-lightning-charge me-1"></i> Emergency / Trauma
+      </button>
+      <button class="btn btn-sm rounded-pill px-3"
+              [ngClass]="selectedWard === 'GENERAL' ? 'btn-secondary' : 'btn-outline-secondary'"
+              (click)="selectedWard = 'GENERAL'">
+        General Ward
+      </button>
+      <button class="btn btn-sm rounded-pill px-3"
+              [ngClass]="selectedWard === 'SEMI_PRIVATE' ? 'btn-info text-white' : 'btn-outline-info'"
+              (click)="selectedWard = 'SEMI_PRIVATE'">
+        Semi-Private
+      </button>
+      <button class="btn btn-sm rounded-pill px-3"
+              [ngClass]="selectedWard === 'MATERNITY' ? 'btn-success' : 'btn-outline-success'"
+              (click)="selectedWard = 'MATERNITY'">
+        Maternity
+      </button>
+      <button class="btn btn-sm rounded-pill px-3"
+              [ngClass]="selectedWard === 'PEDIATRIC' ? 'btn-secondary' : 'btn-outline-secondary'"
+              (click)="selectedWard = 'PEDIATRIC'">
+        Pediatric
+      </button>
+    </div>
+
+    <!-- Active Filter Indicator -->
+    <div class="d-flex align-items-center gap-2">
+      <span *ngIf="selectedStatus !== 'ALL'" class="badge bg-primary rounded-pill px-3 py-2">
+        Status: {{ selectedStatus }}
+        <i class="bi bi-x-circle ms-1 cursor-pointer" (click)="selectedStatus = 'ALL'" title="Clear status filter"></i>
+      </span>
+      <span class="small text-muted fw-semibold">Status:</span>
+      <select class="form-select form-select-sm rounded-pill" [(ngModel)]="selectedStatus" style="width: 150px;">
+        <option value="ALL">All Statuses</option>
+        <option value="AVAILABLE">Available</option>
+        <option value="OCCUPIED">Occupied</option>
+        <option value="CLEANING">Cleaning</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div class="text-muted mt-2">Loading ward floor plan...</div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && filteredBeds.length === 0" class="text-center py-5 bg-white rounded-4 shadow-sm p-4">
+    <i class="bi bi-hospital fs-1 text-muted d-block mb-3"></i>
+    <h5 class="fw-bold text-dark">No Beds Found in this View</h5>
+    <p class="text-muted">Adjust filters or create new beds in this ward.</p>
+    <button (click)="selectedWard = 'ALL'; selectedStatus = 'ALL'" class="btn btn-outline-primary btn-sm rounded-pill">
+      Reset All Filters
+    </button>
+  </div>
+
+  <!-- Ward Floor Grid (Interactive Cards) -->
+  <div *ngIf="!isLoading && filteredBeds.length > 0" class="row g-3">
+    <div *ngFor="let bed of filteredBeds" class="col-12 col-md-6 col-lg-4 col-xl-3">
+      <!-- Bed Card: Click anywhere to open Interactive Bed Details Modal -->
+      <div class="card h-100 border-0 rounded-4 shadow-sm p-3 bed-interactive-card"
+           (click)="openBedDetails(bed)"
+           role="button"
+           tabindex="0"
+           [ngClass]="{
+             'border-start border-success border-4': bed.status === 'AVAILABLE',
+             'border-start border-danger border-4': bed.status === 'OCCUPIED',
+             'border-start border-info border-4': bed.status === 'CLEANING'
+           }">
+        <!-- Top Bar -->
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <h5 class="fw-bold text-dark font-monospace mb-0">{{ bed.bedNumber }}</h5>
+            <span class="badge bg-light text-secondary border mt-1">{{ bed.wardType }}</span>
+          </div>
+          <span class="badge px-3 py-1 rounded-pill"
+                [ngClass]="{
+                  'bg-success-subtle text-success': bed.status === 'AVAILABLE',
+                  'bg-danger-subtle text-danger': bed.status === 'OCCUPIED',
+                  'bg-info-subtle text-info': bed.status === 'CLEANING'
+                }">
+            <i class="bi me-1"
+               [ngClass]="{
+                 'bi-check-circle-fill': bed.status === 'AVAILABLE',
+                 'bi-person-fill': bed.status === 'OCCUPIED',
+                 'bi-droplet-fill': bed.status === 'CLEANING'
+               }"></i>
+            {{ bed.status }}
+          </span>
+        </div>
+
+        <div class="small text-muted mb-2">
+          <i class="bi bi-geo-alt me-1"></i>{{ bed.roomNumber || 'Ward Bay' }} &bull; ${{ bed.dailyRate }}/day
+        </div>
+
+        <!-- Occupied Patient Details -->
+        <div *ngIf="bed.status === 'OCCUPIED'" class="p-2 bg-light rounded-3 mb-2 border">
+          <div class="text-muted small fw-semibold">CURRENT INPATIENT:</div>
+          <div class="fw-bold text-dark">{{ bed.patientName || 'Admitted Patient' }}</div>
+          <div class="small text-muted">Since: {{ bed.admissionDate | date:'mediumDate' }}</div>
+          <div *ngIf="bed.notes" class="small text-secondary fst-italic mt-1 text-truncate">
+            {{ bed.notes }}
+          </div>
+        </div>
+
+        <!-- Cleaning In Progress -->
+        <div *ngIf="bed.status === 'CLEANING'" class="p-2 bg-info-subtle text-info rounded-3 mb-2 small">
+          <i class="bi bi-stars me-1"></i> Sanitization underway. Ready soon.
+        </div>
+
+        <!-- Available State -->
+        <div *ngIf="bed.status === 'AVAILABLE'" class="p-2 bg-success-subtle text-success rounded-3 mb-2 small">
+          <i class="bi bi-door-open me-1"></i> Ready for Immediate Admission
+        </div>
+
+        <!-- Card Click Hint -->
+        <div class="small text-primary mb-2 d-flex align-items-center">
+          <i class="bi bi-hand-index-thumb me-1"></i>
+          <span>Click card for details & actions</span>
+        </div>
+
+        <!-- Card Footer Quick Buttons -->
+        <div class="mt-auto pt-2 border-top d-flex gap-2" (click)="$event.stopPropagation()">
+          <!-- Admit Action -->
+          <button *ngIf="bed.status === 'AVAILABLE' && authService.hasAnyRole(['ROLE_ADMIN', 'ROLE_RECEPTIONIST', 'ROLE_DOCTOR'])"
+                  (click)="openAdmitModal(bed)"
+                  class="btn btn-sm btn-success rounded-pill flex-fill">
+            <i class="bi bi-person-plus me-1"></i> Admit
+          </button>
+
+          <!-- Discharge Action -->
+          <button *ngIf="bed.status === 'OCCUPIED' && authService.hasAnyRole(['ROLE_ADMIN', 'ROLE_RECEPTIONIST', 'ROLE_DOCTOR'])"
+                  (click)="dischargePatient(bed)"
+                  class="btn btn-sm btn-outline-danger rounded-pill flex-fill">
+            <i class="bi bi-box-arrow-right me-1"></i> Discharge
+          </button>
+
+          <!-- Cleaning Action -->
+          <button *ngIf="bed.status === 'CLEANING' && authService.hasAnyRole(['ROLE_ADMIN', 'ROLE_RECEPTIONIST'])"
+                  (click)="markBedReady(bed)"
+                  class="btn btn-sm btn-outline-success rounded-pill flex-fill">
+            <i class="bi bi-check2-circle me-1"></i> Mark Ready
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================== -->
+<!-- INTERACTIVE BED DETAILS & CLINICAL ACTIONS MODAL     -->
+<!-- (Triggered upon clicking any Bed Card)                -->
+<!-- ==================================================== -->
+<div *ngIf="showBedDetailsModal && selectedBedForDetails" class="modal-backdrop fade show"></div>
+<div *ngIf="showBedDetailsModal && selectedBedForDetails" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <!-- Modal Header -->
+      <div class="modal-header p-4"
+           [ngClass]="{
+             'bg-success text-white': selectedBedForDetails.status === 'AVAILABLE',
+             'bg-danger text-white': selectedBedForDetails.status === 'OCCUPIED',
+             'bg-info text-white': selectedBedForDetails.status === 'CLEANING'
+           }">
+        <div>
+          <span class="badge bg-white text-dark fw-bold mb-1 font-monospace">
+            BED #{{ selectedBedForDetails.bedNumber }} &bull; {{ selectedBedForDetails.wardType }} WARD
+          </span>
+          <h4 class="modal-title fw-bold mb-0">
+            <i class="bi bi-hospital me-2"></i>Bed & Clinical Patient Management
+          </h4>
+          <small class="text-white-50">
+            Room: {{ selectedBedForDetails.roomNumber || 'Ward Bay' }} &bull; Daily Rate: ${{ selectedBedForDetails.dailyRate }}
+          </small>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeBedDetailsModal()"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body p-4">
+        <!-- Bed Status Banner -->
+        <div class="d-flex justify-content-between align-items-center p-3 rounded-4 mb-4 border"
+             [ngClass]="{
+               'bg-success-subtle border-success-subtle': selectedBedForDetails.status === 'AVAILABLE',
+               'bg-danger-subtle border-danger-subtle': selectedBedForDetails.status === 'OCCUPIED',
+               'bg-info-subtle border-info-subtle': selectedBedForDetails.status === 'CLEANING'
+             }">
+          <div class="d-flex align-items-center gap-3">
+            <div class="p-3 rounded-circle"
+                 [ngClass]="{
+                   'bg-success text-white': selectedBedForDetails.status === 'AVAILABLE',
+                   'bg-danger text-white': selectedBedForDetails.status === 'OCCUPIED',
+                   'bg-info text-white': selectedBedForDetails.status === 'CLEANING'
+                 }">
+              <i class="bi fs-4"
+                 [ngClass]="{
+                   'bi-check2-circle': selectedBedForDetails.status === 'AVAILABLE',
+                   'bi-person-fill': selectedBedForDetails.status === 'OCCUPIED',
+                   'bi-stars': selectedBedForDetails.status === 'CLEANING'
+                 }"></i>
+            </div>
+            <div>
+              <div class="small fw-semibold text-uppercase text-muted">Current Status</div>
+              <h5 class="fw-bold mb-0 text-dark">{{ selectedBedForDetails.status }}</h5>
+              <small class="text-muted" *ngIf="selectedBedForDetails.status === 'OCCUPIED'">
+                Admitted for {{ stayDurationDays }} days, {{ stayDurationHours }} hours
+              </small>
+              <small class="text-muted" *ngIf="selectedBedForDetails.status === 'AVAILABLE'">
+                Sanitized and ready for immediate inpatient admission
+              </small>
+              <small class="text-muted" *ngIf="selectedBedForDetails.status === 'CLEANING'">
+                Sanitization and terminal disinfection currently underway
+              </small>
+            </div>
+          </div>
+          <div class="text-end" *ngIf="selectedBedForDetails.status === 'OCCUPIED'">
+            <div class="small text-muted">Accrued Inpatient Charges:</div>
+            <div class="h4 fw-bold text-danger mb-0">${{ accruedRoomCharges | number:'1.2-2' }}</div>
+          </div>
+        </div>
+
+        <!-- Room Amenities & Medical Equipment Badges -->
+        <div class="mb-4">
+          <h6 class="fw-bold text-dark mb-2"><i class="bi bi-shield-check text-primary me-2"></i>Bedside Equipment & Life Support Amenities</h6>
+          <div class="d-flex flex-wrap gap-2">
+            <span class="badge bg-light text-dark border p-2 rounded-3"><i class="bi bi-wind text-info me-1"></i> Piped Medical Oxygen (O2)</span>
+            <span class="badge bg-light text-dark border p-2 rounded-3"><i class="bi bi-heart-pulse text-danger me-1"></i> Cardiac Telemetry Ready</span>
+            <span class="badge bg-light text-dark border p-2 rounded-3"><i class="bi bi-bell text-warning me-1"></i> Nurse Emergency Call Bell</span>
+            <span class="badge bg-light text-dark border p-2 rounded-3"><i class="bi bi-sliders text-primary me-1"></i> Motorized Height & Trendelenburg</span>
+            <span class="badge bg-light text-dark border p-2 rounded-3"><i class="bi bi-plugin text-secondary me-1"></i> Dual IV Infusion Rack</span>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- IF BED IS OCCUPIED: Clinical Dashboard     -->
+        <!-- ========================================== -->
+        <div *ngIf="selectedBedForDetails.status === 'OCCUPIED'">
+          <!-- Inpatient Demographics Card -->
+          <div class="card border rounded-4 p-3 bg-light mb-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <span class="badge bg-primary rounded-pill mb-1">Admitted Inpatient</span>
+                <h5 class="fw-bold text-dark mb-0">{{ selectedBedForDetails.patientName }}</h5>
+                <div class="small text-muted">
+                  <i class="bi bi-telephone me-1"></i>{{ selectedBedForDetails.patientPhone || 'No contact on file' }}
+                </div>
+              </div>
+              <div class="text-end">
+                <button (click)="navigateToPatient(selectedBedForDetails.patientId)" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                  <i class="bi bi-person-vcard me-1"></i> Full Patient File
+                </button>
+              </div>
+            </div>
+
+            <div class="row g-2 pt-2 border-top mt-2 small">
+              <div class="col-6 col-md-3">
+                <span class="text-muted">Admission Date:</span>
+                <div class="fw-semibold text-dark">{{ selectedBedForDetails.admissionDate | date:'medium' }}</div>
+              </div>
+              <div class="col-6 col-md-3">
+                <span class="text-muted">Inpatient Stay:</span>
+                <div class="fw-semibold text-dark">{{ stayDurationDays }}d {{ stayDurationHours }}h</div>
+              </div>
+              <div class="col-6 col-md-3">
+                <span class="text-muted">Daily Room Rate:</span>
+                <div class="fw-semibold text-dark">${{ selectedBedForDetails.dailyRate }}/day</div>
+              </div>
+              <div class="col-6 col-md-3">
+                <span class="text-muted">Current Room Total:</span>
+                <div class="fw-bold text-danger">${{ accruedRoomCharges | number:'1.2-2' }}</div>
+              </div>
+            </div>
+
+            <div *ngIf="selectedBedForDetails.notes" class="mt-2 pt-2 border-top small text-secondary">
+              <span class="fw-semibold text-dark">Admission Notes:</span> {{ selectedBedForDetails.notes }}
+            </div>
+          </div>
+
+          <!-- Bedside Latest Vitals Snapshot -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="fw-bold text-dark mb-0">
+                <i class="bi bi-activity text-danger me-2"></i>Bedside Vitals & Health Metrics
+              </h6>
+              <button (click)="toggleInlineVitalsForm()" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                <i class="bi bi-plus-circle me-1"></i> {{ showInlineVitalsForm ? 'Cancel Form' : 'Record Bedside Vitals' }}
+              </button>
+            </div>
+
+            <!-- Inline Vitals Record Form -->
+            <div *ngIf="showInlineVitalsForm" class="p-3 bg-danger-subtle rounded-4 border border-danger-subtle mb-3">
+              <h6 class="fw-bold text-danger mb-3">Record Bedside Clinical Vitals</h6>
+              <div class="row g-2 mb-3">
+                <div class="col-6 col-md-3">
+                  <label class="form-label small fw-semibold">Systolic BP (mmHg)</label>
+                  <input type="number" class="form-control form-control-sm" [(ngModel)]="newVitals.systolicBP" placeholder="120">
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label small fw-semibold">Diastolic BP (mmHg)</label>
+                  <input type="number" class="form-control form-control-sm" [(ngModel)]="newVitals.diastolicBP" placeholder="80">
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label small fw-semibold">Heart Rate (bpm)</label>
+                  <input type="number" class="form-control form-control-sm" [(ngModel)]="newVitals.heartRate" placeholder="72">
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label small fw-semibold">SpO2 Oxygen (%)</label>
+                  <input type="number" class="form-control form-control-sm" [(ngModel)]="newVitals.spo2" placeholder="98">
+                </div>
+                <div class="col-6 col-md-4">
+                  <label class="form-label small fw-semibold">Temperature (°F)</label>
+                  <input type="number" step="0.1" class="form-control form-control-sm" [(ngModel)]="newVitals.temperature" placeholder="98.6">
+                </div>
+                <div class="col-6 col-md-4">
+                  <label class="form-label small fw-semibold">Resp Rate (/min)</label>
+                  <input type="number" class="form-control form-control-sm" [(ngModel)]="newVitals.respiratoryRate" placeholder="16">
+                </div>
+                <div class="col-12 col-md-4">
+                  <label class="form-label small fw-semibold">Clinical Staff Note</label>
+                  <input type="text" class="form-control form-control-sm" [(ngModel)]="newVitals.notes" placeholder="e.g. Vitals normal">
+                </div>
+              </div>
+              <div class="text-end">
+                <button (click)="saveBedVitals()" class="btn btn-sm btn-danger rounded-pill px-4 shadow-sm" [disabled]="isSubmittingVitals">
+                  <i class="bi bi-save me-1"></i> {{ isSubmittingVitals ? 'Saving...' : 'Save Bedside Vitals' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Display Latest Vitals -->
+            <div *ngIf="latestVitals" class="row g-2">
+              <div class="col-6 col-md-3">
+                <div class="p-2 bg-light rounded-3 text-center border">
+                  <span class="text-muted small">Blood Pressure</span>
+                  <div class="fw-bold text-dark">{{ latestVitals.systolicBP }}/{{ latestVitals.diastolicBP }} mmHg</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="p-2 bg-light rounded-3 text-center border">
+                  <span class="text-muted small">Heart Rate</span>
+                  <div class="fw-bold text-danger">{{ latestVitals.heartRate }} bpm</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="p-2 bg-light rounded-3 text-center border">
+                  <span class="text-muted small">Blood Oxygen</span>
+                  <div class="fw-bold text-success">{{ latestVitals.spo2 }}% SpO2</div>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="p-2 bg-light rounded-3 text-center border">
+                  <span class="text-muted small">Temperature</span>
+                  <div class="fw-bold text-dark">{{ latestVitals.temperature }}°F</div>
+                </div>
+              </div>
+            </div>
+            <div *ngIf="!latestVitals && !isLoadingVitals" class="p-3 bg-light rounded-3 border small text-muted text-center">
+              No recent vitals on file for this inpatient. Click "Record Bedside Vitals" to log now.
+            </div>
+          </div>
+
+          <!-- Transfer Inpatient Option -->
+          <div *ngIf="showTransferModal" class="p-3 bg-warning-subtle rounded-4 border border-warning-subtle mb-4">
+            <h6 class="fw-bold text-dark mb-2">
+              <i class="bi bi-arrow-left-right text-warning me-1"></i>Transfer Patient to Another Available Bed
+            </h6>
+            <p class="small text-muted mb-2">Select a destination bed in another ward or specialty bay. Current bed will automatically transition to Cleaning.</p>
+            <div class="row g-2 align-items-center">
+              <div class="col-md-8">
+                <select class="form-select form-select-sm" [(ngModel)]="transferTargetBedId">
+                  <option [ngValue]="null">-- Select Destination Available Bed --</option>
+                  <option *ngFor="let target of availableTransferBeds" [ngValue]="target.id">
+                    Bed {{ target.bedNumber }} ({{ target.wardType }} - ${{ target.dailyRate }}/day)
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-4 d-flex gap-2">
+                <button (click)="confirmBedTransfer()" class="btn btn-sm btn-warning rounded-pill flex-fill" [disabled]="!transferTargetBedId || isSubmittingTransfer">
+                  {{ isSubmittingTransfer ? 'Transferring...' : 'Execute Transfer' }}
+                </button>
+                <button (click)="showTransferModal = false" class="btn btn-sm btn-outline-secondary rounded-pill">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Action Buttons Bar -->
+          <div class="d-flex flex-wrap gap-2 pt-3 border-top">
+            <button (click)="orderLabForInpatient()" class="btn btn-outline-info rounded-pill px-3 shadow-sm">
+              <i class="bi bi-flask me-1"></i> Order Lab Diagnostics
+            </button>
+            <button (click)="toggleTransferModal()" class="btn btn-outline-warning text-dark rounded-pill px-3 shadow-sm">
+              <i class="bi bi-arrow-left-right me-1"></i> Transfer Ward/Bed
+            </button>
+            <button (click)="dischargePatient(selectedBedForDetails)" class="btn btn-outline-danger rounded-pill px-3 shadow-sm ms-auto">
+              <i class="bi bi-box-arrow-right me-1"></i> Discharge & Settle Room
+            </button>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- IF BED IS AVAILABLE: Quick Admit           -->
+        <!-- ========================================== -->
+        <div *ngIf="selectedBedForDetails.status === 'AVAILABLE'" class="text-center py-4">
+          <i class="bi bi-check-circle-fill text-success display-4 mb-2 d-block"></i>
+          <h5 class="fw-bold text-dark">Bed is Available & Sanitized</h5>
+          <p class="text-muted small mb-4">This bed is ready for immediate admission in {{ selectedBedForDetails.wardType }} Ward.</p>
+          <button (click)="openAdmitModal(selectedBedForDetails)" class="btn btn-success rounded-pill px-5 shadow-sm">
+            <i class="bi bi-person-plus-fill me-2"></i> Admit Inpatient to this Bed
+          </button>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- IF BED IS CLEANING: Sanitation Checklist   -->
+        <!-- ========================================== -->
+        <div *ngIf="selectedBedForDetails.status === 'CLEANING'">
+          <h6 class="fw-bold text-dark mb-3"><i class="bi bi-stars text-info me-2"></i>Bed Sanitization Protocol & Disinfection Checklist</h6>
+          <div class="p-3 bg-light rounded-4 border mb-4">
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" id="san1" [(ngModel)]="sanitationStep1">
+              <label class="form-check-label small" for="san1">
+                <strong>Step 1:</strong> Strip bed, dispose used linens, and replace with sterile autoclave sheets.
+              </label>
+            </div>
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" id="san2" [(ngModel)]="sanitationStep2">
+              <label class="form-check-label small" for="san2">
+                <strong>Step 2:</strong> Wipe mattress, bed rails, and headboard with hospital-grade disinfectant.
+              </label>
+            </div>
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" id="san3" [(ngModel)]="sanitationStep3">
+              <label class="form-check-label small" for="san3">
+                <strong>Step 3:</strong> Sterilize oxygen flowmeter port, call bell button, and IV stand.
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="san4" [(ngModel)]="sanitationStep4">
+              <label class="form-check-label small" for="san4">
+                <strong>Step 4:</strong> Complete 15-minute terminal UV room sterilization lamp cycle.
+              </label>
+            </div>
+          </div>
+
+          <div class="text-end">
+            <button (click)="completeSanitation()" class="btn btn-success rounded-pill px-4 shadow-sm" [disabled]="!canCompleteSanitation">
+              <i class="bi bi-check2-all me-1"></i> Check Off & Mark Bed Available
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer bg-light p-3">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeBedDetailsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- ADMIT PATIENT MODAL                        -->
+<!-- ========================================== -->
+<div *ngIf="showAdmitModal && selectedBedForAdmit" class="modal-backdrop fade show"></div>
+<div *ngIf="showAdmitModal && selectedBedForAdmit" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-primary text-white p-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-1">
+            <i class="bi bi-person-plus-fill me-2"></i>Admit Patient to Bed {{ selectedBedForAdmit.bedNumber }}
+          </h5>
+          <small class="text-white-50">Ward: {{ selectedBedForAdmit.wardType }} &bull; ${{ selectedBedForAdmit.dailyRate }}/day</small>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeAdmitModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Select Patient to Admit <span class="text-danger">*</span></label>
+          <select class="form-select rounded-3" [(ngModel)]="admitPatientId">
+            <option [ngValue]="null">-- Choose Registered Patient --</option>
+            <option *ngFor="let p of patients" [ngValue]="p.patientId || p.id">
+              {{ p.firstName }} {{ p.lastName }} ({{ p.phone || 'ID: ' + (p.patientId || p.id) }})
+            </option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Admission Reason & Clinical Notes</label>
+          <textarea class="form-control rounded-3" rows="3" [(ngModel)]="admitNotes"
+                    placeholder="e.g. Post-operative recovery, cardiac monitoring, IV antibiotic regimen..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer bg-light p-3">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeAdmitModal()">Cancel</button>
+        <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm"
+                [disabled]="!admitPatientId || isSubmittingAdmit"
+                (click)="confirmAdmit()">
+          <i class="bi bi-check2-circle me-1"></i> {{ isSubmittingAdmit ? 'Admitting...' : 'Confirm Admission' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- CREATE NEW BED MODAL                       -->
+<!-- ========================================== -->
+<div *ngIf="showNewBedModal" class="modal-backdrop fade show"></div>
+<div *ngIf="showNewBedModal" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-dark text-white p-4">
+        <h5 class="modal-title fw-bold mb-0"><i class="bi bi-plus-circle me-2"></i>Add Hospital Bed</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeNewBedModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Bed Number / Code <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" [(ngModel)]="newBed.bedNumber" placeholder="e.g. ICU-105, GEN-208">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Ward Classification</label>
+          <select class="form-select" [(ngModel)]="newBed.wardType">
+            <option value="GENERAL">General Ward</option>
+            <option value="SEMI_PRIVATE">Semi-Private</option>
+            <option value="ICU">Intensive Care Unit (ICU)</option>
+            <option value="EMERGENCY">Emergency / Trauma</option>
+            <option value="MATERNITY">Maternity Wing</option>
+            <option value="PEDIATRIC">Pediatric Wing</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Room / Bay Location</label>
+          <input type="text" class="form-control" [(ngModel)]="newBed.roomNumber" placeholder="e.g. Room 302, 3rd Floor East">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Daily Bed Charge ($)</label>
+          <input type="number" class="form-control" [(ngModel)]="newBed.dailyRate">
+        </div>
+      </div>
+      <div class="modal-footer bg-light p-3">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeNewBedModal()">Cancel</button>
+        <button type="button" class="btn btn-primary rounded-pill px-4" [disabled]="!newBed.bedNumber || isSubmittingNewBed" (click)="saveNewBed()">
+          Save Bed
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

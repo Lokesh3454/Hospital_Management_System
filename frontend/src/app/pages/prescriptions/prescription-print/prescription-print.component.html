@@ -1,0 +1,149 @@
+<div class="print-actions d-print-none mb-4 d-flex justify-content-between align-items-center">
+  <a [routerLink]="['/prescriptions', prescriptionId]" class="btn btn-outline-secondary rounded-pill">
+    <i class="bi bi-arrow-left me-1"></i> Back to Prescription Details
+  </a>
+  <div class="d-flex gap-2">
+    <button (click)="printPrescription()" class="btn btn-primary rounded-pill px-4 shadow-sm">
+      <i class="bi bi-printer me-2"></i> Print / Save as PDF
+    </button>
+  </div>
+</div>
+
+<div *ngIf="isLoading" class="text-center py-5 d-print-none">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+</div>
+
+<div *ngIf="errorMessage" class="alert alert-danger d-print-none">
+  {{ errorMessage }}
+</div>
+
+<div *ngIf="prescription && !isLoading" class="prescription-sheet bg-white p-5 rounded-4 shadow-sm border mx-auto">
+  <!-- Hospital Letterhead -->
+  <div class="letterhead pb-4 border-bottom mb-4 d-flex justify-content-between align-items-start">
+    <div class="d-flex align-items-center gap-3">
+      <div class="hospital-logo-badge bg-primary text-white rounded-3 d-flex align-items-center justify-content-center">
+        <i class="bi bi-hospital fs-1"></i>
+      </div>
+      <div>
+        <h2 class="h3 fw-bold text-primary mb-0">CITY GENERAL HOSPITAL & RESEARCH INSTITUTE</h2>
+        <p class="text-muted small mb-0">Accredited by NABH & JCI | Centre of Clinical Excellence</p>
+        <p class="text-secondary small mb-0">100 Healthcare Boulevard, Suite 400 | Ph: +1 (800) 555-0199 | Emergency: 911</p>
+      </div>
+    </div>
+    <div class="text-end">
+      <span class="badge bg-light text-dark border px-3 py-2 rounded-pill font-monospace">
+        Rx #{{ prescription.id }}
+      </span>
+      <div class="small text-muted mt-2">
+        Date: <span class="fw-semibold text-dark">{{ prescription.prescriptionDate | date:'mediumDate' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Doctor & Patient Info Bar -->
+  <div class="row g-4 p-3 bg-light rounded-3 mb-4">
+    <!-- Doctor Info -->
+    <div class="col-md-6 border-end">
+      <span class="text-uppercase text-muted fw-bold small">Prescribing Physician</span>
+      <h5 class="fw-bold text-dark mt-1 mb-0">{{ prescription.doctorName || 'Attending Physician' }}</h5>
+      <p class="text-primary small mb-1 fw-semibold">
+        {{ prescription.doctorSpecialization || 'Clinical Specialist' }} - {{ prescription.doctorDepartment || 'Outpatient Department' }}
+      </p>
+      <span class="text-muted small">Reg No: <strong>MED-{{ prescription.doctorId || '84920' }}-TX</strong> | Room: {{ prescription.doctorRoomNumber || 'Consultation Suite' }}</span>
+    </div>
+
+    <!-- Patient Info -->
+    <div class="col-md-6 ps-md-4">
+      <span class="text-uppercase text-muted fw-bold small">Patient Information</span>
+      <h5 class="fw-bold text-dark mt-1 mb-0">{{ prescription.patientName || 'Patient' }}</h5>
+      <div class="d-flex flex-wrap gap-3 small text-muted mt-1">
+        <span>ID: <strong class="text-dark">PT-{{ prescription.patientId }}</strong></span>
+        <span>Gender: <strong class="text-dark">{{ prescription.patientGender || patient?.gender || 'N/A' }}</strong></span>
+        <span>Phone: <strong class="text-dark">{{ prescription.patientPhone || patient?.phone || 'N/A' }}</strong></span>
+      </div>
+      <!-- Allergies Alert Badge -->
+      <div *ngIf="patient?.allergies" class="mt-2">
+        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i> Allergies: {{ patient?.allergies }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clinical Reason / Diagnosis -->
+  <div *ngIf="prescription.appointmentReason" class="mb-4 p-3 border-start border-primary border-3 bg-white rounded-2 border">
+    <div class="text-muted small fw-semibold text-uppercase">Clinical Indication / Diagnosis</div>
+    <div class="fw-semibold text-dark mt-1">{{ prescription.appointmentReason }}</div>
+  </div>
+
+  <!-- Rx Section -->
+  <div class="rx-header d-flex align-items-center gap-2 mb-3">
+    <span class="rx-symbol text-primary fw-bold display-6 font-monospace">&#8478;</span>
+    <h5 class="fw-bold mb-0 text-dark">Prescribed Medications</h5>
+  </div>
+
+  <!-- Medications Table -->
+  <div class="table-responsive mb-4">
+    <table class="table table-bordered align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 5%">#</th>
+          <th style="width: 35%">Medicine & Strength</th>
+          <th style="width: 15%">Dosage</th>
+          <th style="width: 25%">Frequency & Timing</th>
+          <th style="width: 20%">Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of prescription.items; let i = index">
+          <td class="text-center fw-semibold text-muted">{{ i + 1 }}</td>
+          <td>
+            <div class="fw-bold text-dark">{{ item.medicineName }}</div>
+            <div *ngIf="item.instructions" class="text-muted small italic">
+              <i class="bi bi-info-circle me-1"></i>{{ item.instructions }}
+            </div>
+          </td>
+          <td><span class="badge bg-secondary-subtle text-dark px-2 py-1">{{ item.dosage }}</span></td>
+          <td><span class="fw-medium">{{ item.frequency }}</span></td>
+          <td class="text-primary fw-semibold">{{ item.duration }}</td>
+        </tr>
+        <tr *ngIf="!prescription.items || prescription.items.length === 0">
+          <td colspan="5" class="text-center text-muted py-3">No medication line items recorded.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Doctor's Clinical Advice & Notes -->
+  <div *ngIf="prescription.notes" class="mb-5 p-4 bg-light rounded-3 border">
+    <h6 class="fw-bold text-dark mb-2">
+      <i class="bi bi-clipboard2-pulse me-2 text-primary"></i>Doctor's Advice & Lifestyle Instructions
+    </h6>
+    <p class="mb-0 text-secondary" style="white-space: pre-line;">{{ prescription.notes }}</p>
+  </div>
+
+  <!-- Footer with Seal and Signature -->
+  <div class="prescription-footer pt-4 border-top mt-5 d-flex justify-content-between align-items-end">
+    <div class="hospital-seal text-center p-2 border rounded-3 text-muted small" style="width: 140px;">
+      <i class="bi bi-patch-check-fill text-primary fs-3 d-block mb-1"></i>
+      <div class="fw-bold text-dark" style="font-size: 0.75rem;">OFFICIAL SEAL</div>
+      <div style="font-size: 0.65rem;">CITY GENERAL HOSPITAL</div>
+    </div>
+
+    <div class="text-center" style="width: 220px;">
+      <div class="signature-line border-bottom border-dark pb-1 mb-2">
+        <span class="font-monospace text-primary fw-bold" style="font-style: italic; font-size: 1.1rem;">
+          {{ prescription.doctorName || 'Dr. Authorized' }}
+        </span>
+      </div>
+      <div class="fw-bold text-dark small">{{ prescription.doctorName || 'Authorized Medical Officer' }}</div>
+      <div class="text-muted small" style="font-size: 0.75rem;">Registered Medical Practitioner</div>
+    </div>
+  </div>
+
+  <div class="text-center text-muted mt-4 pt-3 border-top" style="font-size: 0.7rem;">
+    This is a computer-generated clinical prescription valid for 30 days from issuance. For refills or emergencies, contact the pharmacy hotline.
+  </div>
+</div>

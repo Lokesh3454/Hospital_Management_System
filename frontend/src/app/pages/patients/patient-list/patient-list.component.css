@@ -1,0 +1,31 @@
+.avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.patient-link:hover {
+  color: #0ea5e9 !important;
+  text-decoration: underline !important;
+}
+
+.text-teal {
+  color: #0d9488 !important;
+}
+
+.btn-teal {
+  background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
+  border: none;
+}
+
+.btn-teal:hover {
+  filter: brightness(1.08);
+}
+
+.extra-small {
+  font-size: 0.75rem;
+}

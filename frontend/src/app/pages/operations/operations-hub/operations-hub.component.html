@@ -1,0 +1,1491 @@
+<div class="container-fluid py-4 px-md-4">
+  <!-- Header Bar -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1 small">
+          <li class="breadcrumb-item"><a [routerLink]="authService.getDashboardRouteForUser()">Dashboard</a></li>
+          <li class="breadcrumb-item active">Hospital Operations</li>
+        </ol>
+      </nav>
+      <h2 class="h3 fw-bold mb-0 text-dark">
+        <i class="bi bi-grid-fill text-danger me-2"></i>Hospital Operations Command Center
+      </h2>
+      <p class="text-muted small mb-0">Centralized control for Inpatient Wards, Pharmacy Stock, Pathology Diagnostics, OPD Queues & Telemedicine</p>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button (click)="loadAllOperationsData()" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm" [disabled]="isLoading">
+        <i class="bi bi-arrow-clockwise me-1" [class.spin]="isLoading"></i> Refresh Telemetry
+      </button>
+      <a routerLink="/analytics" class="btn btn-primary rounded-pill px-3 shadow-sm">
+        <i class="bi bi-graph-up-arrow me-1"></i> Executive Analytics
+      </a>
+    </div>
+  </div>
+
+  <!-- Notifications -->
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm mb-4">
+    <i class="bi bi-check-circle-fill me-2"></i>{{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = null"></button>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm mb-4">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-danger" role="status"></div>
+    <div class="text-muted small mt-2">Connecting to hospital floor telemetry...</div>
+  </div>
+
+  <div *ngIf="!isLoading">
+    <!-- Operations Hero Telemetry Banner -->
+    <div class="card border-0 rounded-4 shadow-sm p-4 mb-4 bg-gradient-operations text-white">
+      <div class="row align-items-center g-3">
+        <div class="col-lg-8">
+          <span class="badge bg-white text-dark fw-bold mb-2">Hospital Operational Status: Optimal</span>
+          <h3 class="fw-bold mb-1">Centralized Operational Intelligence</h3>
+          <p class="text-white-50 mb-3 small">
+            Click on any module card below to open real-time diagnostic drawers, trigger immediate patient admissions, adjust pharmacy inventory, or broadcast lobby tokens.
+          </p>
+          <div class="d-flex flex-wrap gap-3">
+            <div class="badge bg-white bg-opacity-10 p-2 rounded-3 border border-white border-opacity-25">
+              <i class="bi bi-hospital me-1"></i> {{ availableBeds }} Beds Available
+            </div>
+            <div class="badge bg-white bg-opacity-10 p-2 rounded-3 border border-white border-opacity-25" [class.bg-danger]="lowStockMedicines.length > 0">
+              <i class="bi bi-capsule me-1"></i> {{ lowStockMedicines.length }} Low-Stock Drugs
+            </div>
+            <div class="badge bg-white bg-opacity-10 p-2 rounded-3 border border-white border-opacity-25">
+              <i class="bi bi-flask me-1"></i> {{ pendingLabOrders }} Lab Orders Pending
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+          <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-25 d-inline-block text-start">
+            <div class="text-white-50 small fw-semibold text-uppercase">Ward Occupancy</div>
+            <div class="display-6 fw-bold text-white mb-1">{{ bedOccupancyRate }}%</div>
+            <div class="progress bg-white bg-opacity-25" style="height: 6px; width: 160px;">
+              <div class="progress-bar bg-warning" [style.width.%]="bedOccupancyRate"></div>
+            </div>
+            <div class="small text-white-50 mt-1">{{ occupiedBeds }} of {{ totalBeds }} beds occupied</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Operations Cards Grid -->
+    <div class="row g-4 mb-5">
+      <!-- 1. Bed & Inpatient Ward Care Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm op-card border-top border-primary border-4"
+             (click)="openCardFeature('BEDS')"
+             role="button"
+             tabindex="0">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="op-icon-box bg-primary-subtle text-primary">
+                <i class="bi bi-hospital fs-3"></i>
+              </div>
+              <span class="badge px-3 py-1 rounded-pill"
+                    [ngClass]="availableBeds > 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+                {{ availableBeds > 0 ? availableBeds + ' Free Beds' : 'Ward Full' }}
+              </span>
+            </div>
+
+            <h5 class="fw-bold text-dark mb-1">Bed & Ward Care</h5>
+            <p class="text-muted small mb-3">Real-time occupancy tracking, inpatient allocations, ICU/Trauma status, and sanitation.</p>
+
+            <!-- Metrics Preview -->
+            <div class="bg-light rounded-3 p-3 mb-3 border">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Total Ward Beds:</span>
+                <span class="fw-bold text-dark">{{ totalBeds }}</span>
+              </div>
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Admitted Inpatients:</span>
+                <span class="fw-bold text-danger">{{ occupiedBeds }}</span>
+              </div>
+              <div class="d-flex justify-content-between small">
+                <span class="text-muted">Cleaning / Sanitizing:</span>
+                <span class="fw-bold text-info">{{ cleaningBeds }}</span>
+              </div>
+            </div>
+
+            <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+              <span class="text-primary fw-semibold small">
+                <i class="bi bi-hand-index-thumb me-1"></i> Click for Actions
+              </span>
+              <i class="bi bi-arrow-right-circle text-primary fs-5"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Pharmacy & Medicine Inventory Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm op-card border-top border-success border-4"
+             (click)="openCardFeature('PHARMACY')"
+             role="button"
+             tabindex="0">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="op-icon-box bg-success-subtle text-success">
+                <i class="bi bi-capsule fs-3"></i>
+              </div>
+              <span class="badge px-3 py-1 rounded-pill"
+                    [ngClass]="lowStockMedicines.length > 0 ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'">
+                {{ lowStockMedicines.length > 0 ? lowStockMedicines.length + ' Low Stock Alerts' : 'Fully Stocked' }}
+              </span>
+            </div>
+
+            <h5 class="fw-bold text-dark mb-1">Pharmacy & Stock</h5>
+            <p class="text-muted small mb-3">Medication catalog, batch numbers, formulation thresholds, and 1-click dispensing.</p>
+
+            <!-- Metrics Preview -->
+            <div class="bg-light rounded-3 p-3 mb-3 border">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Registered Drugs:</span>
+                <span class="fw-bold text-dark">{{ totalMedicines }}</span>
+              </div>
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Reorder Warnings:</span>
+                <span class="fw-bold" [class.text-danger]="lowStockMedicines.length > 0">{{ lowStockMedicines.length }}</span>
+              </div>
+              <div class="d-flex justify-content-between small">
+                <span class="text-muted">Total Shelved Units:</span>
+                <span class="fw-bold text-success">{{ totalStockUnits | number }}</span>
+              </div>
+            </div>
+
+            <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+              <span class="text-success fw-semibold small">
+                <i class="bi bi-hand-index-thumb me-1"></i> Click for Stock Drawer
+              </span>
+              <i class="bi bi-arrow-right-circle text-success fs-5"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Laboratory & Diagnostics Hub Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm op-card border-top border-info border-4"
+             (click)="openCardFeature('LAB')"
+             role="button"
+             tabindex="0">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="op-icon-box bg-info-subtle text-info">
+                <i class="bi bi-flask-fill fs-3"></i>
+              </div>
+              <span class="badge px-3 py-1 rounded-pill"
+                    [ngClass]="pendingLabOrders > 0 ? 'bg-warning-subtle text-warning-emphasis' : 'bg-success-subtle text-success'">
+                {{ pendingLabOrders }} In Pipeline
+              </span>
+            </div>
+
+            <h5 class="fw-bold text-dark mb-1">Diagnostics & Lab</h5>
+            <p class="text-muted small mb-3">Pathology specimen intake, biochemical profiles, hematology, and report sign-off.</p>
+
+            <!-- Metrics Preview -->
+            <div class="bg-light rounded-3 p-3 mb-3 border">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Total Lab Orders:</span>
+                <span class="fw-bold text-dark">{{ totalLabOrders }}</span>
+              </div>
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Pending Samples:</span>
+                <span class="fw-bold text-warning-emphasis">{{ pendingLabOrders }}</span>
+              </div>
+              <div class="d-flex justify-content-between small">
+                <span class="text-muted">Published Reports:</span>
+                <span class="fw-bold text-success">{{ completedLabOrders }}</span>
+              </div>
+            </div>
+
+            <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+              <span class="text-info fw-semibold small">
+                <i class="bi bi-hand-index-thumb me-1"></i> Click for Lab Queue
+              </span>
+              <i class="bi bi-arrow-right-circle text-info fs-5"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Live OPD Token Queue Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm op-card border-top border-warning border-4"
+             (click)="openCardFeature('QUEUE')"
+             role="button"
+             tabindex="0">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="op-icon-box bg-warning-subtle text-warning-emphasis">
+                <i class="bi bi-display fs-3"></i>
+              </div>
+              <span class="badge bg-warning-subtle text-warning-emphasis px-3 py-1 rounded-pill">
+                Live TV Screen
+              </span>
+            </div>
+
+            <h5 class="fw-bold text-dark mb-1">Live OPD Queue</h5>
+            <p class="text-muted small mb-3">High-contrast waiting hall screen, doctor consulting rooms, and pleasant token bell chime.</p>
+
+            <!-- Metrics Preview -->
+            <div class="bg-light rounded-3 p-3 mb-3 border">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Today's Visits:</span>
+                <span class="fw-bold text-dark">{{ todayAppointments.length }}</span>
+              </div>
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Lobby Audio Chime:</span>
+                <span class="badge bg-success-subtle text-success">Web Audio Ready</span>
+              </div>
+              <div class="d-flex justify-content-between small">
+                <span class="text-muted">Fullscreen Kiosk:</span>
+                <span class="fw-bold text-primary">TV 1080p Support</span>
+              </div>
+            </div>
+
+            <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+              <span class="text-warning-emphasis fw-semibold small">
+                <i class="bi bi-hand-index-thumb me-1"></i> Click for Audio & Display
+              </span>
+              <i class="bi bi-arrow-right-circle text-warning-emphasis fs-5"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Executive Analytics & KPIs Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm op-card border-top border-danger border-4"
+             (click)="openCardFeature('ANALYTICS')"
+             role="button"
+             tabindex="0">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="op-icon-box bg-danger-subtle text-danger">
+                <i class="bi bi-graph-up-arrow fs-3"></i>
+              </div>
+              <span class="badge bg-danger-subtle text-danger px-3 py-1 rounded-pill">
+                Financial Intel
+              </span>
+            </div>
+
+            <h5 class="fw-bold text-dark mb-1">Executive Analytics</h5>
+            <p class="text-muted small mb-3">Hospital collections, monthly trends, department encumbrance, and doctor workload metrics.</p>
+
+            <!-- Metrics Preview -->
+            <div class="bg-light rounded-3 p-3 mb-3 border">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Cumulative Revenue:</span>
+                <span class="fw-bold text-success">${{ (analytics?.totalRevenue || 0) | number:'1.2-2' }}</span>
+              </div>
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Clinical Encounters:</span>
+                <span class="fw-bold text-dark">{{ analytics?.totalAppointments || 0 }}</span>
+              </div>
+              <div class="d-flex justify-content-between small">
+                <span class="text-muted">Registered Patients:</span>
+                <span class="fw-bold text-primary">{{ analytics?.totalPatients || 0 }}</span>
+              </div>
+            </div>
+
+            <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+              <span class="text-danger fw-semibold small">
+                <i class="bi bi-hand-index-thumb me-1"></i> Click for Financial KPIs
+              </span>
+              <i class="bi bi-arrow-right-circle text-danger fs-5"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Telemedicine & Virtual Clinic Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm op-card border-top border-purple border-4"
+             (click)="openCardFeature('TELEMED')"
+             role="button"
+             tabindex="0">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="op-icon-box bg-purple-subtle text-purple">
+                <i class="bi bi-camera-video fs-3"></i>
+              </div>
+              <span class="badge bg-purple-subtle text-purple px-3 py-1 rounded-pill">
+                WebRTC Enabled
+              </span>
+            </div>
+
+            <h5 class="fw-bold text-dark mb-1">Telemedicine Suite</h5>
+            <p class="text-muted small mb-3">Remote audio/video consultations, in-call clinical chart drawer, and screen sharing.</p>
+
+            <!-- Metrics Preview -->
+            <div class="bg-light rounded-3 p-3 mb-3 border">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Virtual Suite:</span>
+                <span class="fw-bold text-success">Online & Operational</span>
+              </div>
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Feed Protocol:</span>
+                <span class="fw-bold text-dark">Local WebRTC / Cam</span>
+              </div>
+              <div class="d-flex justify-content-between small">
+                <span class="text-muted">In-Call EHR Drawer:</span>
+                <span class="fw-bold text-purple">Rx & Labs Integrated</span>
+              </div>
+            </div>
+
+            <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+              <span class="text-purple fw-semibold small">
+                <i class="bi bi-hand-index-thumb me-1"></i> Click for Virtual Room
+              </span>
+              <i class="bi bi-arrow-right-circle text-purple fs-5"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Enterprise Specialized Centers & Wings -->
+    <div class="d-flex justify-content-between align-items-center mb-3 mt-2">
+      <div>
+        <h4 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+          <i class="bi bi-building-add text-danger"></i> Enterprise Clinical & Operations Wings
+        </h4>
+        <p class="text-muted small mb-0">High-acuity emergency trauma bay, surgical suites, blood bank, cashless TPA desk & workforce rostering</p>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+      <!-- 7. Emergency & Trauma Center Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm op-card border-top border-danger border-4"
+             (click)="openCardFeature('EMERGENCY')"
+             role="button"
+             tabindex="0">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="op-icon-box bg-danger-subtle text-danger">
+                <i class="bi bi-hospital fs-3"></i>
+              </div>
+              <span class="badge px-3 py-1 rounded-pill" [ngClass]="isCodeBlueActive ? 'bg-danger text-white pulse-glow' : 'bg-danger-subtle text-danger'">
+                {{ isCodeBlueActive ? 'CODE BLUE ACTIVE' : 'ESI Triage 1-5' }}
+              </span>
+            </div>
+            <h5 class="fw-bold text-dark mb-1">Emergency & Trauma Command</h5>
+            <p class="text-muted small mb-3">Resuscitation protocols, Code Blue synthesizer, and ambulance ETA tracking.</p>
+            <div class="bg-light rounded-3 p-3 mb-3 border">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Active ER Cases:</span>
+                <span class="fw-bold text-danger">{{ activeEmergencyCasesCount }} in Treatment</span>
+              </div>
+              <div class="d-flex justify-content-between small">
+                <span class="text-muted">Broadcast Siren:</span>
+                <span class="fw-bold text-success">Web Audio Ready</span>
+              </div>
+            </div>
+            <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+              <span class="text-danger fw-semibold small">
+                <i class="bi bi-hand-index-thumb me-1"></i> Click for Trauma Drawer
+              </span>
+              <i class="bi bi-arrow-right-circle text-danger fs-5"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Operating Theater & Surgeries Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm op-card border-top border-primary border-4"
+             (click)="openCardFeature('SURGERY')"
+             role="button"
+             tabindex="0">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="op-icon-box bg-primary-subtle text-primary">
+                <i class="bi bi-scissors fs-3"></i>
+              </div>
+              <span class="badge bg-primary-subtle text-primary px-3 py-1 rounded-pill">OT Suites 1–4</span>
+            </div>
+            <h5 class="fw-bold text-dark mb-1">Operation Theater (OT) Suites</h5>
+            <p class="text-muted small mb-3">Surgical team allocation, pre-op safety checklists, and PACU Aldrete recovery tracking.</p>
+            <div class="bg-light rounded-3 p-3 mb-3 border">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Surgeries In Progress:</span>
+                <span class="fw-bold text-danger">{{ inProgressSurgeriesCount }} Active</span>
+              </div>
+              <div class="d-flex justify-content-between small">
+                <span class="text-muted">Total Scheduled:</span>
+                <span class="fw-bold text-dark">{{ surgeries.length }} Bookings</span>
+              </div>
+            </div>
+            <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+              <span class="text-primary fw-semibold small">
+                <i class="bi bi-hand-index-thumb me-1"></i> Click for Suite Drawer
+              </span>
+              <i class="bi bi-arrow-right-circle text-primary fs-5"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. Blood Bank & Component Inventory Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm op-card border-top border-danger border-4"
+             (click)="openCardFeature('BLOOD_BANK')"
+             role="button"
+             tabindex="0">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="op-icon-box bg-danger-subtle text-danger">
+                <i class="bi bi-droplet-half fs-3"></i>
+              </div>
+              <span class="badge px-3 py-1 rounded-pill" [ngClass]="criticalBloodShortages > 0 ? 'bg-danger text-white' : 'bg-success-subtle text-success'">
+                {{ criticalBloodShortages > 0 ? criticalBloodShortages + ' Critical Shortage' : 'Stocks Normal' }}
+              </span>
+            </div>
+            <h5 class="fw-bold text-dark mb-1">Blood Bank & Cryo-Vault</h5>
+            <p class="text-muted small mb-3">8-group component reserves: Whole Blood, PRBC, Platelets & FFP with surgical locks.</p>
+            <div class="bg-light rounded-3 p-3 mb-3 border">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Total Inventory:</span>
+                <span class="fw-bold text-dark">{{ totalBloodUnits }} Units</span>
+              </div>
+              <div class="d-flex justify-content-between small">
+                <span class="text-muted">Compatibility:</span>
+                <span class="fw-bold text-success">All 8 Groups Monitored</span>
+              </div>
+            </div>
+            <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+              <span class="text-danger fw-semibold small">
+                <i class="bi bi-hand-index-thumb me-1"></i> Click for Vault Drawer
+              </span>
+              <i class="bi bi-arrow-right-circle text-danger fs-5"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10. Insurance & TPA Pre-Auth Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm op-card border-top border-success border-4"
+             (click)="openCardFeature('INSURANCE')"
+             role="button"
+             tabindex="0">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="op-icon-box bg-success-subtle text-success">
+                <i class="bi bi-shield-check fs-3"></i>
+              </div>
+              <span class="badge bg-success-subtle text-success px-3 py-1 rounded-pill">Cashless Desk</span>
+            </div>
+            <h5 class="fw-bold text-dark mb-1">Insurance & TPA Claims</h5>
+            <p class="text-muted small mb-3">Cashless pre-authorization, ICD-10 coding, and auto 10% co-pay calculation.</p>
+            <div class="bg-light rounded-3 p-3 mb-3 border">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Pending TPA Review:</span>
+                <span class="fw-bold text-warning-emphasis">{{ pendingClaimsCount }} Claims</span>
+              </div>
+              <div class="d-flex justify-content-between small">
+                <span class="text-muted">Total Claims Filed:</span>
+                <span class="fw-bold text-dark">{{ claims.length }} Records</span>
+              </div>
+            </div>
+            <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+              <span class="text-success fw-semibold small">
+                <i class="bi bi-hand-index-thumb me-1"></i> Click for Claims Drawer
+              </span>
+              <i class="bi bi-arrow-right-circle text-success fs-5"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11. Staff Rostering & Shifts Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm op-card border-top border-info border-4"
+             (click)="openCardFeature('ROSTER')"
+             role="button"
+             tabindex="0">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="op-icon-box bg-info-subtle text-info">
+                <i class="bi bi-people-fill fs-3"></i>
+              </div>
+              <span class="badge bg-info-subtle text-dark px-3 py-1 rounded-pill">24/7 Coverage</span>
+            </div>
+            <h5 class="fw-bold text-dark mb-1">Staff Rostering & Shifts</h5>
+            <p class="text-muted small mb-3">Weekly duty rota across Morning, Evening & Night shifts with on-call specialists.</p>
+            <div class="bg-light rounded-3 p-3 mb-3 border">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Shift Coverage:</span>
+                <span class="fw-bold text-success">3 Shifts Daily</span>
+              </div>
+              <div class="d-flex justify-content-between small">
+                <span class="text-muted">Emergency On-Call:</span>
+                <span class="fw-bold text-danger">{{ onCallSpecialists.length }} On-Call</span>
+              </div>
+            </div>
+            <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+              <span class="text-info fw-semibold small">
+                <i class="bi bi-hand-index-thumb me-1"></i> Click for Roster Drawer
+              </span>
+              <i class="bi bi-arrow-right-circle text-info fs-5"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 12. Automated Notification Outbox Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100 border-0 rounded-4 shadow-sm op-card border-top border-primary border-4"
+             (click)="openCardFeature('NOTIFICATIONS')"
+             role="button"
+             tabindex="0">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div class="op-icon-box bg-primary-subtle text-primary">
+                <i class="bi bi-send-check-fill fs-3"></i>
+              </div>
+              <span class="badge bg-primary-subtle text-primary px-3 py-1 rounded-pill">Multi-Channel</span>
+            </div>
+            <h5 class="fw-bold text-dark mb-1">Notification Dispatch Outbox</h5>
+            <p class="text-muted small mb-3">Audit log for SMS, WhatsApp, Email, and Code Blue emergency broadcasts.</p>
+            <div class="bg-light rounded-3 p-3 mb-3 border">
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-muted">Outbox Protocol:</span>
+                <span class="fw-bold text-success">Omnichannel Active</span>
+              </div>
+              <div class="d-flex justify-content-between small">
+                <span class="text-muted">Recent Logs:</span>
+                <span class="fw-bold text-primary">{{ notificationLogs.length }} Dispatched</span>
+              </div>
+            </div>
+            <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+              <span class="text-primary fw-semibold small">
+                <i class="bi bi-hand-index-thumb me-1"></i> Click for Outbox Drawer
+              </span>
+              <i class="bi bi-arrow-right-circle text-primary fs-5"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- INTERACTIVE CLICK MODALS / DRAWERS         -->
+<!-- ========================================== -->
+
+<!-- 1. BEDS DRAWER MODAL -->
+<div *ngIf="activeModal === 'BEDS'" class="modal-backdrop fade show"></div>
+<div *ngIf="activeModal === 'BEDS'" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-primary text-white p-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-1">
+            <i class="bi bi-hospital me-2"></i>Inpatient Bed & Ward Care Telemetry
+          </h5>
+          <p class="text-white-50 small mb-0">Floor allocation, ICU status, and quick ward actions</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Telemetry Summary -->
+        <div class="row g-3 mb-4">
+          <div class="col-4">
+            <div class="p-3 bg-light rounded-3 border text-center">
+              <div class="text-muted small">Total Capacity</div>
+              <div class="h4 fw-bold text-dark mb-0">{{ totalBeds }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-success-subtle rounded-3 border border-success-subtle text-center">
+              <div class="text-success small">Available</div>
+              <div class="h4 fw-bold text-success mb-0">{{ availableBeds }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-danger-subtle rounded-3 border border-danger-subtle text-center">
+              <div class="text-danger small">Occupied</div>
+              <div class="h4 fw-bold text-danger mb-0">{{ occupiedBeds }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Bed List Preview -->
+        <h6 class="fw-bold text-dark mb-2">Recent Ward Floor Status</h6>
+        <div class="table-responsive border rounded-3 mb-3">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th>Bed No.</th>
+                <th>Ward</th>
+                <th>Status</th>
+                <th>Current Inpatient</th>
+                <th class="text-end">Rate/Day</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let bed of beds.slice(0, 5)">
+                <td class="fw-bold font-monospace">{{ bed.bedNumber }}</td>
+                <td>{{ bed.wardType }}</td>
+                <td>
+                  <span class="badge px-2 py-1 rounded-pill"
+                        [ngClass]="{
+                          'bg-success-subtle text-success': bed.status === 'AVAILABLE',
+                          'bg-danger-subtle text-danger': bed.status === 'OCCUPIED',
+                          'bg-info-subtle text-info': bed.status === 'CLEANING'
+                        }">
+                    {{ bed.status }}
+                  </span>
+                </td>
+                <td>{{ bed.patientName || 'None (Vacant)' }}</td>
+                <td class="text-end fw-bold">${{ bed.dailyRate }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeModal()">Close</button>
+        <div class="d-flex gap-2">
+          <button (click)="navigateTo('/beds')" class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="bi bi-arrow-right-circle me-1"></i> Open Full Bed Management
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. PHARMACY DRAWER MODAL -->
+<div *ngIf="activeModal === 'PHARMACY'" class="modal-backdrop fade show"></div>
+<div *ngIf="activeModal === 'PHARMACY'" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-success text-white p-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-1">
+            <i class="bi bi-capsule me-2"></i>Pharmacy Stock & Reorder Alert Inspection
+          </h5>
+          <p class="text-white-50 small mb-0">Dispensing, low inventory warning items, and 1-click restock</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="fw-bold text-dark mb-0">
+            <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Medicines Below Reorder Threshold
+          </h6>
+          <span class="badge bg-danger rounded-pill">{{ lowStockMedicines.length }} Critical Items</span>
+        </div>
+
+        <div *ngIf="lowStockMedicines.length === 0" class="alert alert-success rounded-3 small">
+          <i class="bi bi-check-circle-fill me-2"></i>All medication formulations are currently at safe inventory levels.
+        </div>
+
+        <div class="table-responsive border rounded-3 mb-3">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th>Medicine</th>
+                <th>Dosage Form</th>
+                <th>Stock</th>
+                <th>Min Reorder</th>
+                <th class="text-end">Quick Restock</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let med of (lowStockMedicines.length > 0 ? lowStockMedicines : medicines.slice(0, 5))">
+                <td class="fw-bold">{{ med.name }}</td>
+                <td>{{ med.dosageForm }}</td>
+                <td>
+                  <span [ngClass]="med.stockQuantity <= med.reorderLevel ? 'badge bg-danger-subtle text-danger' : 'fw-bold text-dark'">
+                    {{ med.stockQuantity }} units
+                  </span>
+                </td>
+                <td class="text-muted">{{ med.reorderLevel }} units</td>
+                <td class="text-end">
+                  <button (click)="quickRestock(med, 20)" class="btn btn-sm btn-outline-success rounded-pill py-0 px-2">
+                    <i class="bi bi-plus-circle me-1"></i> +20 Units
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeModal()">Close</button>
+        <button (click)="navigateTo('/pharmacy')" class="btn btn-success rounded-pill px-4 shadow-sm">
+          <i class="bi bi-arrow-right-circle me-1"></i> Open Pharmacy Catalog
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. LAB DIAGNOSTICS MODAL -->
+<div *ngIf="activeModal === 'LAB'" class="modal-backdrop fade show"></div>
+<div *ngIf="activeModal === 'LAB'" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-info text-white p-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-1">
+            <i class="bi bi-flask-fill me-2"></i>Laboratory & Pathology Pipeline
+          </h5>
+          <p class="text-white-50 small mb-0">Specimen status, diagnostic test requests, and verified reports</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row g-3 mb-4">
+          <div class="col-4">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <div class="text-muted small">Total Orders</div>
+              <div class="h4 fw-bold text-dark mb-0">{{ totalLabOrders }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-warning-subtle rounded-3 text-center border border-warning-subtle">
+              <div class="text-warning-emphasis small">In Progress</div>
+              <div class="h4 fw-bold text-warning-emphasis mb-0">{{ pendingLabOrders }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-success-subtle rounded-3 text-center border border-success-subtle">
+              <div class="text-success small">Completed</div>
+              <div class="h4 fw-bold text-success mb-0">{{ completedLabOrders }}</div>
+            </div>
+          </div>
+        </div>
+
+        <h6 class="fw-bold text-dark mb-2">Active Diagnostic Orders in Lab</h6>
+        <div class="table-responsive border rounded-3 mb-3">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th>Test Name</th>
+                <th>Patient</th>
+                <th>Status</th>
+                <th class="text-end">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let test of labTests.slice(0, 5)">
+                <td class="fw-bold">{{ test.testName }}</td>
+                <td>{{ test.patientName }}</td>
+                <td>
+                  <span class="badge px-2 py-1 rounded-pill"
+                        [ngClass]="{
+                          'bg-warning-subtle text-warning-emphasis': test.status === 'ORDERED' || test.status === 'SAMPLE_COLLECTED',
+                          'bg-info-subtle text-info': test.status === 'IN_PROGRESS',
+                          'bg-success-subtle text-success': test.status === 'COMPLETED'
+                        }">
+                    {{ test.status }}
+                  </span>
+                </td>
+                <td class="text-end fw-bold">${{ test.cost }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeModal()">Close</button>
+        <button (click)="navigateTo('/lab')" class="btn btn-info text-white rounded-pill px-4 shadow-sm">
+          <i class="bi bi-arrow-right-circle me-1"></i> Open Laboratory Hub
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. OPD QUEUE MODAL -->
+<div *ngIf="activeModal === 'QUEUE'" class="modal-backdrop fade show"></div>
+<div *ngIf="activeModal === 'QUEUE'" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-md modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-warning text-dark p-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-1">
+            <i class="bi bi-display me-2"></i>Live OPD Token Queue Screen
+          </h5>
+          <p class="text-muted small mb-0">Lobby waiting audio synthesizer & kiosk display mode</p>
+        </div>
+        <button type="button" class="btn-close" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body p-4 text-center">
+        <div class="p-4 bg-dark text-white rounded-4 mb-4 shadow">
+          <div class="text-uppercase text-warning fw-bold tracking-wider small">Now Serving Simulation</div>
+          <div class="display-3 fw-bold text-success my-2">#T-101</div>
+          <div class="text-white-50">Dr. David Smith &bull; Room 302 (Cardiology)</div>
+        </div>
+
+        <p class="small text-muted mb-3">
+          Test the Web Audio API synthesizer chime that announces token updates to patients in the waiting hall:
+        </p>
+        <button (click)="playQueueChime()" class="btn btn-outline-warning text-dark rounded-pill px-4 mb-3" [disabled]="isChimePlaying">
+          <i class="bi bi-volume-up-fill me-2 fs-5"></i>
+          {{ isChimePlaying ? 'Playing Ding-Dong...' : 'Play Token Chime Bell' }}
+        </button>
+      </div>
+      <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeModal()">Close</button>
+        <button (click)="navigateTo('/queue-display')" class="btn btn-warning fw-semibold rounded-pill px-4 shadow-sm">
+          <i class="bi bi-fullscreen me-1"></i> Launch Fullscreen Display
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5. ANALYTICS MODAL -->
+<div *ngIf="activeModal === 'ANALYTICS'" class="modal-backdrop fade show"></div>
+<div *ngIf="activeModal === 'ANALYTICS'" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-danger text-white p-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-1">
+            <i class="bi bi-graph-up-arrow me-2"></i>Executive Healthcare Intelligence Preview
+          </h5>
+          <p class="text-white-50 small mb-0">Hospital financial performance & volume telemetry</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <div class="text-muted small">Total Revenue</div>
+              <div class="h5 fw-bold text-success mb-0">${{ (analytics?.totalRevenue || 0) | number:'1.2-2' }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <div class="text-muted small">Bed Occupancy</div>
+              <div class="h5 fw-bold text-danger mb-0">{{ analytics?.bedOccupancyRate || 0 }}%</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <div class="text-muted small">Encounters</div>
+              <div class="h5 fw-bold text-primary mb-0">{{ analytics?.totalAppointments || 0 }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <div class="text-muted small">Lab Orders</div>
+              <div class="h5 fw-bold text-info mb-0">{{ analytics?.totalLabOrders || 0 }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-info rounded-3 small">
+          <i class="bi bi-info-circle-fill me-2"></i>Detailed breakdown including 6-Month revenue bar chart, departmental distribution meters, and doctor star productivity leaderboards are available in Executive Analytics.
+        </div>
+      </div>
+      <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeModal()">Close</button>
+        <button (click)="navigateTo('/analytics')" class="btn btn-danger rounded-pill px-4 shadow-sm">
+          <i class="bi bi-arrow-right-circle me-1"></i> Open Full Analytics Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 6. TELEMEDICINE MODAL -->
+<div *ngIf="activeModal === 'TELEMED'" class="modal-backdrop fade show"></div>
+<div *ngIf="activeModal === 'TELEMED'" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-md modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-purple text-white p-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-1">
+            <i class="bi bi-camera-video me-2"></i>Telemedicine Virtual Consultation Room
+          </h5>
+          <p class="text-white-50 small mb-0">Direct remote consultation with integrated clinical drawer</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body p-4 text-center">
+        <div class="p-4 bg-light rounded-4 mb-3 border">
+          <i class="bi bi-camera-video-fill text-purple display-4 mb-2 d-block"></i>
+          <h6 class="fw-bold text-dark">Encrypted WebRTC Virtual Consultation</h6>
+          <p class="text-muted small mb-0">Connect doctor and patient over high-definition video, audio, screen share, and instant electronic prescription issuance.</p>
+        </div>
+      </div>
+      <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeModal()">Close</button>
+        <button (click)="navigateTo('/telemedicine/1')" class="btn btn-purple text-white rounded-pill px-4 shadow-sm">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Launch Active Video Suite
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 7. EMERGENCY & TRAUMA DRAWER MODAL -->
+<div *ngIf="activeModal === 'EMERGENCY'" class="modal-backdrop fade show" (click)="closeModal()"></div>
+<div *ngIf="activeModal === 'EMERGENCY'" class="modal fade show d-block" tabindex="-1" (click)="closeModal()">
+  <div class="modal-dialog modal-xl modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-danger text-white p-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-1 d-flex align-items-center gap-2">
+            <i class="bi bi-hospital fs-4"></i> Emergency & Trauma Command Drawer
+            <span *ngIf="isCodeBlueActive" class="badge bg-white text-danger ms-2">CODE BLUE ACTIVE</span>
+          </h5>
+          <p class="text-white-50 small mb-0">High-acuity triage queue, immediate resuscitation broadcast, and inbound ambulance tracker</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Telemetry Summary -->
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <div class="text-muted small">Active ER Patients</div>
+              <div class="h4 fw-bold text-dark mb-0">{{ activeEmergencyCasesCount }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-danger-subtle rounded-3 text-center border border-danger-subtle">
+              <div class="text-danger small">ESI-1 (Immediate)</div>
+              <div class="h4 fw-bold text-danger mb-0">
+                {{ resuscitationCasesCount }}
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-warning-subtle rounded-3 text-center border border-warning-subtle">
+              <div class="text-warning-emphasis small">Inbound Ambulances</div>
+              <div class="h4 fw-bold text-warning-emphasis mb-0">
+                {{ inboundAmbulancesCount }}
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <div class="text-muted small">Siren Broadcast</div>
+              <div class="h5 fw-bold mb-0" [ngClass]="isSirenPlaying ? 'text-danger' : 'text-success'">
+                {{ isSirenPlaying ? 'SIREN PLAYING' : 'Standby' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="isSirenPlaying" class="alert alert-danger d-flex justify-content-between align-items-center rounded-3 mb-3">
+          <div class="fw-bold">
+            <i class="bi bi-volume-up-fill me-2"></i> Audio Siren Active! Mobilize Resuscitation Team.
+          </div>
+          <button class="btn btn-sm btn-outline-danger" (click)="stopSiren()">Mute Siren</button>
+        </div>
+
+        <h6 class="fw-bold text-dark mb-2">Active Emergency Queue</h6>
+        <div class="table-responsive bg-light rounded-3 p-2 border mb-3">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead>
+              <tr class="text-muted text-uppercase">
+                <th>Case #</th>
+                <th>Patient</th>
+                <th>Triage Severity</th>
+                <th>Complaint & Vitals</th>
+                <th>Transit / Bay</th>
+                <th class="text-end">Immediate Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of emergencyCases.slice(0, 5)">
+                <td class="fw-bold font-monospace">{{ c.caseNumber }}</td>
+                <td>
+                  <div class="fw-bold">{{ c.patientName }}</div>
+                  <div class="text-muted x-small">{{ c.patientAge || 35 }}y • {{ c.gender }}</div>
+                </td>
+                <td>
+                  <span class="badge" [ngClass]="c.triageLevel === 'RESUSCITATION' ? 'bg-danger' : (c.triageLevel === 'EMERGENT' ? 'bg-warning text-dark' : 'bg-primary')">
+                    {{ c.triageLevel }}
+                  </span>
+                </td>
+                <td>
+                  <div class="text-truncate" style="max-width: 200px;">{{ c.chiefComplaint }}</div>
+                  <div class="text-muted x-small">{{ c.bloodPressure || '120/80' }} • {{ c.heartRate || 80 }} bpm</div>
+                </td>
+                <td>
+                  <span *ngIf="(c.etaMinutes ?? 0) > 0" class="badge bg-warning text-dark">
+                    <i class="bi bi-truck me-1"></i> ETA {{ c.etaMinutes }}m
+                  </span>
+                  <span *ngIf="c.assignedBedNumber" class="text-dark fw-semibold">
+                    Bay: {{ c.assignedBedNumber }}
+                  </span>
+                  <span *ngIf="!(c.etaMinutes ?? 0) && !c.assignedBedNumber" class="text-muted">Waiting</span>
+                </td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-outline-danger" (click)="triggerCodeBlueInHub(c)">
+                    <i class="bi bi-megaphone-fill me-1"></i> Code Blue
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeModal()">Close</button>
+        <button (click)="navigateTo('/emergency')" class="btn btn-danger rounded-pill px-4 shadow-sm">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Open Full Emergency Command Center
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 8. SURGERY DRAWER MODAL -->
+<div *ngIf="activeModal === 'SURGERY'" class="modal-backdrop fade show" (click)="closeModal()"></div>
+<div *ngIf="activeModal === 'SURGERY'" class="modal fade show d-block" tabindex="-1" (click)="closeModal()">
+  <div class="modal-dialog modal-xl modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-primary text-white p-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-1 d-flex align-items-center gap-2">
+            <i class="bi bi-scissors fs-4"></i> Operating Theater (OT) Suites Drawer
+          </h5>
+          <p class="text-white-50 small mb-0">Real-time OT-1 to OT-4 occupancy, surgical team assignments & PACU recovery status</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Telemetry Summary -->
+        <div class="row g-3 mb-4">
+          <div class="col-4">
+            <div class="p-3 bg-danger-subtle rounded-3 text-center border border-danger-subtle">
+              <div class="text-danger small">Surgeries In-Progress</div>
+              <div class="h4 fw-bold text-danger mb-0">{{ inProgressSurgeriesCount }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-warning-subtle rounded-3 text-center border border-warning-subtle">
+              <div class="text-warning-emphasis small">In PACU Recovery</div>
+              <div class="h4 fw-bold text-warning-emphasis mb-0">
+                {{ pacuSurgeriesCount }}
+              </div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <div class="text-muted small">Total Bookings</div>
+              <div class="h4 fw-bold text-dark mb-0">{{ surgeries.length }}</div>
+            </div>
+          </div>
+        </div>
+
+        <h6 class="fw-bold text-dark mb-2">Operating Suites Overview</h6>
+        <div class="table-responsive bg-light rounded-3 p-2 border mb-3">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead>
+              <tr class="text-muted text-uppercase">
+                <th>Surg #</th>
+                <th>Procedure & Room</th>
+                <th>Patient & Lead Surgeon</th>
+                <th>Checklist</th>
+                <th>Status</th>
+                <th class="text-end">Quick Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of surgeries.slice(0, 5)">
+                <td class="fw-bold font-monospace">{{ s.surgeryNumber }}</td>
+                <td>
+                  <div class="fw-bold">{{ s.procedureName }}</div>
+                  <span class="badge bg-primary-subtle text-primary">{{ s.otRoom }}</span>
+                </td>
+                <td>
+                  <div class="fw-semibold">{{ s.patientName }}</div>
+                  <div class="text-muted x-small">Surgeon: {{ s.leadSurgeonName }}</div>
+                </td>
+                <td>
+                  <span class="badge me-1" [ngClass]="s.preOpCleared ? 'bg-success' : 'bg-secondary'">Pre-Op</span>
+                  <span class="badge me-1" [ngClass]="s.anesthesiaCleared ? 'bg-success' : 'bg-secondary'">Anesth</span>
+                  <span class="badge" [ngClass]="s.consentSigned ? 'bg-success' : 'bg-secondary'">Consent</span>
+                </td>
+                <td>
+                  <span class="badge" [ngClass]="s.status === 'IN_PROGRESS' ? 'bg-danger' : (s.status === 'IN_PACU' ? 'bg-warning text-dark' : 'bg-primary')">
+                    {{ s.status }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <button *ngIf="s.status !== 'COMPLETED'" class="btn btn-sm btn-outline-primary" (click)="quickAdvanceSurgery(s)">
+                    <i class="bi bi-fast-forward-fill me-1"></i> Advance
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeModal()">Close</button>
+        <button (click)="navigateTo('/surgery')" class="btn btn-primary rounded-pill px-4 shadow-sm">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Open Full Surgical Scheduling Suite
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 9. BLOOD BANK DRAWER MODAL -->
+<div *ngIf="activeModal === 'BLOOD_BANK'" class="modal-backdrop fade show" (click)="closeModal()"></div>
+<div *ngIf="activeModal === 'BLOOD_BANK'" class="modal fade show d-block" tabindex="-1" (click)="closeModal()">
+  <div class="modal-dialog modal-xl modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-danger text-white p-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-1 d-flex align-items-center gap-2">
+            <i class="bi bi-droplet-half fs-4"></i> Blood Bank & Cryo-Vault Drawer
+          </h5>
+          <p class="text-white-50 small mb-0">8-group real-time inventory, surgical reserve locks, and rapid stock intake</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Telemetry Summary -->
+        <div class="row g-3 mb-4">
+          <div class="col-4">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <div class="text-muted small">Available Units</div>
+              <div class="h4 fw-bold text-danger mb-0">{{ totalBloodUnits }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-warning-subtle rounded-3 text-center border border-warning-subtle">
+              <div class="text-warning-emphasis small">Critical Shortages (&lt;5u)</div>
+              <div class="h4 fw-bold text-warning-emphasis mb-0">{{ criticalBloodShortages }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <div class="text-muted small">Total Lots</div>
+              <div class="h4 fw-bold text-dark mb-0">{{ bloodInventory.length }}</div>
+            </div>
+          </div>
+        </div>
+
+        <h6 class="fw-bold text-dark mb-2">Live Component Inventory & Rapid Actions</h6>
+        <div class="row g-3 mb-3">
+          <div *ngFor="let item of bloodInventory.slice(0, 8)" class="col-md-6 col-lg-3">
+            <div class="card p-3 rounded-3 border bg-light h-100" [class.border-danger]="item.unitsAvailable < 5">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-danger fs-6">{{ item.bloodGroup }}</span>
+                <span class="badge bg-light text-dark border">{{ item.componentType }}</span>
+              </div>
+              <div class="d-flex align-items-baseline gap-2 mb-2">
+                <span class="h4 fw-bold mb-0" [ngClass]="item.unitsAvailable < 5 ? 'text-danger' : 'text-dark'">
+                  {{ item.unitsAvailable }}
+                </span>
+                <span class="text-muted small">units ({{ item.reservedUnits || 0 }} locked)</span>
+              </div>
+              <div class="d-flex gap-1 mt-auto">
+                <button class="btn btn-sm btn-outline-primary flex-fill" [disabled]="item.unitsAvailable <= 0" (click)="quickReserveBlood(item)">
+                  <i class="bi bi-lock me-1"></i> Reserve 1
+                </button>
+                <button class="btn btn-sm btn-outline-success flex-fill" (click)="quickRestockBlood(item)">
+                  <i class="bi bi-plus me-1"></i> +5
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeModal()">Close</button>
+        <button (click)="navigateTo('/blood-bank')" class="btn btn-danger rounded-pill px-4 shadow-sm">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Open Full Blood Bank Vault
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 10. INSURANCE DRAWER MODAL -->
+<div *ngIf="activeModal === 'INSURANCE'" class="modal-backdrop fade show" (click)="closeModal()"></div>
+<div *ngIf="activeModal === 'INSURANCE'" class="modal fade show d-block" tabindex="-1" (click)="closeModal()">
+  <div class="modal-dialog modal-xl modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-success text-white p-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-1 d-flex align-items-center gap-2">
+            <i class="bi bi-shield-check fs-4"></i> Cashless Insurance & TPA Desk Drawer
+          </h5>
+          <p class="text-white-50 small mb-0">Pre-authorization adjudication, ICD-10 coding, and automated 10% co-pay tracking</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Telemetry Summary -->
+        <div class="row g-3 mb-4">
+          <div class="col-4">
+            <div class="p-3 bg-warning-subtle rounded-3 text-center border border-warning-subtle">
+              <div class="text-warning-emphasis small">Pending TPA Review</div>
+              <div class="h4 fw-bold text-warning-emphasis mb-0">{{ pendingClaimsCount }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-success-subtle rounded-3 text-center border border-success-subtle">
+              <div class="text-success small">Settled Claims</div>
+              <div class="h4 fw-bold text-success mb-0">
+                {{ settledClaimsCount }}
+              </div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <div class="text-muted small">Total Claims</div>
+              <div class="h4 fw-bold text-dark mb-0">{{ claims.length }}</div>
+            </div>
+          </div>
+        </div>
+
+        <h6 class="fw-bold text-dark mb-2">Recent Pre-Auth Claims Queue</h6>
+        <div class="table-responsive bg-light rounded-3 p-2 border mb-3">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead>
+              <tr class="text-muted text-uppercase">
+                <th>Claim #</th>
+                <th>Patient & Policy</th>
+                <th>TPA Provider</th>
+                <th>Bill & Claim (₹)</th>
+                <th>Patient Co-Pay (10%)</th>
+                <th>Status</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of claims.slice(0, 5)">
+                <td class="fw-bold font-monospace">{{ c.claimNumber }}</td>
+                <td>
+                  <div class="fw-bold">{{ c.patientName }}</div>
+                  <div class="text-muted x-small">Pol: {{ c.policyNumber }}</div>
+                </td>
+                <td>{{ c.insuranceProvider }}</td>
+                <td>
+                  <div class="fw-semibold">₹{{ c.claimAmount | number }}</div>
+                  <div class="text-muted x-small">Total: ₹{{ c.totalBillAmount | number }}</div>
+                </td>
+                <td>
+                  <span class="badge bg-warning-subtle text-warning-emphasis">₹{{ c.patientCoPay || 0 | number }}</span>
+                </td>
+                <td>
+                  <span class="badge" [ngClass]="c.status === 'PRE_AUTH_APPROVED' ? 'bg-success' : (c.status === 'SUBMITTED' ? 'bg-primary' : 'bg-warning text-dark')">
+                    {{ c.status }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <button *ngIf="c.status === 'SUBMITTED' || c.status === 'UNDER_REVIEW'" class="btn btn-sm btn-outline-success" (click)="quickApproveClaim(c)">
+                    <i class="bi bi-check-lg me-1"></i> Approve Pre-Auth
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeModal()">Close</button>
+        <button (click)="navigateTo('/insurance')" class="btn btn-success rounded-pill px-4 shadow-sm">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Open Insurance Claims Desk
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 11. STAFF ROSTER DRAWER MODAL -->
+<div *ngIf="activeModal === 'ROSTER'" class="modal-backdrop fade show" (click)="closeModal()"></div>
+<div *ngIf="activeModal === 'ROSTER'" class="modal fade show d-block" tabindex="-1" (click)="closeModal()">
+  <div class="modal-dialog modal-xl modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-info text-dark p-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-1 d-flex align-items-center gap-2">
+            <i class="bi bi-people-fill fs-4"></i> Workforce Roster & On-Call Dispatch Drawer
+          </h5>
+          <p class="text-muted small mb-0">Multi-shift coverage schedule and emergency on-call specialist directory</p>
+        </div>
+        <button type="button" class="btn-close" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Telemetry Summary -->
+        <div class="row g-3 mb-4">
+          <div class="col-4">
+            <div class="p-3 bg-danger-subtle rounded-3 text-center border border-danger-subtle">
+              <div class="text-danger small">On-Call Specialists</div>
+              <div class="h4 fw-bold text-danger mb-0">{{ onCallSpecialists.length }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <div class="text-muted small">Total Shifts Scheduled</div>
+              <div class="h4 fw-bold text-dark mb-0">{{ shifts.length }}</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-3 bg-success-subtle rounded-3 text-center border border-success-subtle">
+              <div class="text-success small">Active Coverage</div>
+              <div class="h4 fw-bold text-success mb-0">24 / 7 Live</div>
+            </div>
+          </div>
+        </div>
+
+        <h6 class="fw-bold text-danger mb-2">
+          <i class="bi bi-broadcast me-1"></i> Emergency On-Call Specialists (Click to toggle)
+        </h6>
+        <div class="row g-3 mb-4">
+          <div *ngFor="let s of onCallSpecialists" class="col-md-6 col-lg-4">
+            <div class="p-3 bg-danger-subtle border border-danger-subtle rounded-3 d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold text-dark">{{ s.staffName }}</div>
+                <div class="text-muted x-small">{{ s.roleTitle }} • {{ s.department }}</div>
+                <div class="text-danger small mt-1"><i class="bi bi-telephone-fill me-1"></i> {{ s.contactPhone || '+1-555-0199' }}</div>
+              </div>
+              <button class="btn btn-sm btn-outline-danger" (click)="quickToggleOnCall(s)">Release</button>
+            </div>
+          </div>
+          <div *ngIf="onCallSpecialists.length === 0" class="col-12 text-muted small text-center py-2">
+            No specialists currently on-call.
+          </div>
+        </div>
+
+        <h6 class="fw-bold text-dark mb-2">Today's Duty Roster Highlights</h6>
+        <div class="table-responsive bg-light rounded-3 p-2 border mb-3">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead>
+              <tr class="text-muted text-uppercase">
+                <th>Staff Name</th>
+                <th>Role & Department</th>
+                <th>Day</th>
+                <th>Shift & Timing</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of shifts.slice(0, 6)">
+                <td class="fw-bold">{{ s.staffName }}</td>
+                <td>{{ s.roleTitle }} ({{ s.department }})</td>
+                <td>{{ s.dayOfWeek }}</td>
+                <td>
+                  <span class="badge bg-primary-subtle text-primary">{{ s.shiftType }} ({{ s.startTime }} - {{ s.endTime }})</span>
+                </td>
+                <td class="text-end">
+                  <button class="btn btn-sm" [ngClass]="s.onCall ? 'btn-danger' : 'btn-outline-secondary'" (click)="quickToggleOnCall(s)">
+                    {{ s.onCall ? 'ON-CALL' : 'Set On-Call' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeModal()">Close</button>
+        <button (click)="navigateTo('/staff-roster')" class="btn btn-info rounded-pill px-4 shadow-sm text-dark">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Open Full Duty Roster
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 12. NOTIFICATIONS DRAWER MODAL -->
+<div *ngIf="activeModal === 'NOTIFICATIONS'" class="modal-backdrop fade show" (click)="closeModal()"></div>
+<div *ngIf="activeModal === 'NOTIFICATIONS'" class="modal fade show d-block" tabindex="-1" (click)="closeModal()">
+  <div class="modal-dialog modal-xl modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <div class="modal-header bg-primary text-white p-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-1 d-flex align-items-center gap-2">
+            <i class="bi bi-send-check-fill fs-4"></i> Automated Notification Dispatch Outbox Drawer
+          </h5>
+          <p class="text-white-50 small mb-0">Multi-channel communication audit log and rapid test transmission simulator</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Quick Test Dispatcher Form -->
+        <div class="card p-3 rounded-3 border bg-light mb-4">
+          <h6 class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
+            <i class="bi bi-send-plus-fill text-primary"></i> Rapid Outbox Dispatcher
+          </h6>
+          <div class="row g-2 align-items-center">
+            <div class="col-md-3">
+              <select class="form-select form-select-sm" [(ngModel)]="quickAlertChannel">
+                <option value="SMS">SMS Gateway</option>
+                <option value="WHATSAPP">WhatsApp Business</option>
+                <option value="EMAIL">Email Gateway</option>
+              </select>
+            </div>
+            <div class="col-md-7">
+              <input type="text" class="form-control form-control-sm" [(ngModel)]="quickAlertText" placeholder="Message content...">
+            </div>
+            <div class="col-md-2 text-end">
+              <button class="btn btn-sm btn-primary w-100" (click)="quickDispatchOutbox()" [disabled]="isDispatchingQuickAlert">
+                <span *ngIf="isDispatchingQuickAlert" class="spinner-border spinner-border-sm me-1"></span>
+                Send Alert
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <h6 class="fw-bold text-dark mb-2">Recent Outbox Transmissions</h6>
+        <div class="table-responsive bg-light rounded-3 p-2 border mb-3">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead>
+              <tr class="text-muted text-uppercase">
+                <th>Channel</th>
+                <th>Recipient</th>
+                <th>Event</th>
+                <th>Message Snippet</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let l of notificationLogs.slice(0, 6)">
+                <td>
+                  <span class="badge" [ngClass]="l.channel === 'SMS' ? 'bg-primary' : (l.channel === 'WHATSAPP' ? 'bg-success' : 'bg-info text-dark')">
+                    {{ l.channel }}
+                  </span>
+                </td>
+                <td>
+                  <div class="fw-bold">{{ l.recipientName }}</div>
+                  <div class="text-muted x-small font-monospace">{{ l.recipientContact }}</div>
+                </td>
+                <td><span class="badge bg-light text-dark border">{{ l.triggerEvent }}</span></td>
+                <td class="text-truncate" style="max-width: 280px;">{{ l.message }}</td>
+                <td>
+                  <span class="badge" [ngClass]="l.status === 'DELIVERED' ? 'bg-success' : 'bg-primary'">{{ l.status }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeModal()">Close</button>
+        <button (click)="navigateTo('/notifications')" class="btn btn-primary rounded-pill px-4 shadow-sm">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Open Full Notification Outbox
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

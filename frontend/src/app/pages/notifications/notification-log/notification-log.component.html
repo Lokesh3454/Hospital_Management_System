@@ -1,0 +1,249 @@
+<div class="container-fluid py-4 notification-wrapper">
+  <!-- Breadcrumbs & Header -->
+  <div class="row align-items-center mb-4">
+    <div class="col-md-7">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a [routerLink]="authService.getDashboardRouteForUser()" class="text-decoration-none">Dashboard</a></li>
+          <li class="breadcrumb-item"><a routerLink="/operations" class="text-decoration-none">Operations Hub</a></li>
+          <li class="breadcrumb-item active text-primary fw-semibold" aria-current="page">Notification Dispatch Outbox</li>
+        </ol>
+      </nav>
+      <h2 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+        <i class="bi bi-send-check-fill text-primary fs-2"></i>
+        Automated Notification Dispatch Outbox
+      </h2>
+      <p class="text-muted small mb-0">Multi-channel communication audit log tracking SMS, WhatsApp, Email, and Critical Clinical Broadcasts</p>
+    </div>
+
+    <div class="col-md-5 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end gap-2">
+      <button class="btn btn-outline-primary d-flex align-items-center gap-2" (click)="loadLogs()">
+        <i class="bi bi-arrow-clockwise" [class.spin]="isLoading"></i> Refresh Outbox
+      </button>
+      <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" (click)="openDispatchModal()">
+        <i class="bi bi-send-plus-fill"></i> Test Dispatch Alert
+      </button>
+    </div>
+  </div>
+
+  <!-- Telemetry Counter Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold text-uppercase">Total Dispatched</div>
+            <h3 class="fw-bold mb-0 mt-1 text-dark">{{ logs.length }}</h3>
+            <span class="text-muted x-small">Across All Gateways</span>
+          </div>
+          <div class="stat-icon-wrapper bg-primary-subtle text-primary rounded-circle p-3">
+            <i class="bi bi-mailbox2 fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100 border-start border-success border-4">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-success small fw-semibold text-uppercase">Delivery Success</div>
+            <h3 class="fw-bold mb-0 mt-1 text-success">{{ deliveryRate }}%</h3>
+            <span class="text-muted x-small">{{ totalDelivered }} Delivered</span>
+          </div>
+          <div class="stat-icon-wrapper bg-success-subtle text-success rounded-circle p-3">
+            <i class="bi bi-check2-circle fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-primary small fw-semibold text-uppercase">SMS Transmissions</div>
+            <h3 class="fw-bold mb-0 mt-1 text-primary">{{ smsCount }}</h3>
+            <span class="text-muted x-small">Telephony Carrier Gateway</span>
+          </div>
+          <div class="stat-icon-wrapper bg-primary-subtle text-primary rounded-circle p-3">
+            <i class="bi bi-chat-text-fill fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-success small fw-semibold text-uppercase">WhatsApp Alerts</div>
+            <h3 class="fw-bold mb-0 mt-1 text-success">{{ whatsappCount }}</h3>
+            <span class="text-muted x-small">Official WhatsApp Business</span>
+          </div>
+          <div class="stat-icon-wrapper bg-success-subtle text-success rounded-circle p-3">
+            <i class="bi bi-whatsapp fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div *ngIf="successMessage" class="alert alert-success border-0 rounded-3 shadow-sm alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i> {{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = null"></button>
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-danger border-0 rounded-3 shadow-sm alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+  </div>
+
+  <!-- Filter Toolbar -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-7">
+        <label class="form-label small text-muted fw-semibold mb-1">Filter by Communication Channel</label>
+        <div class="d-flex flex-wrap gap-1">
+          <button type="button" class="btn btn-sm" [ngClass]="selectedChannel === 'ALL' ? 'btn-primary' : 'btn-outline-secondary'" (click)="selectedChannel = 'ALL'">All Channels</button>
+          <button type="button" class="btn btn-sm" [ngClass]="selectedChannel === 'SMS' ? 'btn-primary' : 'btn-outline-secondary'" (click)="selectedChannel = 'SMS'"><i class="bi bi-chat-dots-fill me-1"></i> SMS</button>
+          <button type="button" class="btn btn-sm" [ngClass]="selectedChannel === 'WHATSAPP' ? 'btn-success' : 'btn-outline-secondary'" (click)="selectedChannel = 'WHATSAPP'"><i class="bi bi-whatsapp me-1"></i> WhatsApp</button>
+          <button type="button" class="btn btn-sm" [ngClass]="selectedChannel === 'EMAIL' ? 'btn-info text-dark' : 'btn-outline-secondary'" (click)="selectedChannel = 'EMAIL'"><i class="bi bi-envelope-fill me-1"></i> Email</button>
+          <button type="button" class="btn btn-sm" [ngClass]="selectedChannel === 'BROADCAST_ALARM' ? 'btn-danger' : 'btn-outline-secondary'" (click)="selectedChannel = 'BROADCAST_ALARM'"><i class="bi bi-megaphone-fill me-1"></i> Broadcast</button>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small text-muted fw-semibold mb-1">Delivery Status</label>
+        <select class="form-select form-select-sm" [(ngModel)]="selectedStatus">
+          <option value="ALL">All Statuses</option>
+          <option value="DELIVERED">Delivered</option>
+          <option value="SENT">Sent (In Gateway)</option>
+          <option value="FAILED">Failed</option>
+        </select>
+      </div>
+
+      <div class="col-md-2 text-md-end mt-4">
+        <span class="text-muted small"><strong>{{ filteredLogs.length }}</strong> logs</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading Outbox...</span>
+    </div>
+    <p class="text-muted mt-2">Loading notification dispatch logs...</p>
+  </div>
+
+  <!-- Outbox Table -->
+  <div *ngIf="!isLoading && filteredLogs.length > 0" class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-uppercase small text-muted">
+          <tr>
+            <th class="ps-4">Channel</th>
+            <th>Recipient & Endpoint</th>
+            <th>Trigger Event</th>
+            <th>Subject / Message Content</th>
+            <th>Status</th>
+            <th class="text-end pe-4">Sent Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let l of filteredLogs">
+            <td class="ps-4">
+              <span [class]="getChannelBadgeClass(l.channel)" class="d-inline-flex align-items-center gap-1 px-2 py-1">
+                <i class="bi" [ngClass]="getChannelIcon(l.channel)"></i> {{ l.channel }}
+              </span>
+            </td>
+            <td>
+              <div class="fw-bold text-dark">{{ l.recipientName }}</div>
+              <div class="text-muted x-small font-monospace">{{ l.recipientContact }}</div>
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border">{{ l.triggerEvent }}</span>
+            </td>
+            <td style="max-width: 320px;">
+              <div *ngIf="l.subject" class="fw-semibold text-dark text-truncate small">{{ l.subject }}</div>
+              <div class="text-muted small text-truncate">{{ l.message }}</div>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="{
+                'bg-success': l.status === 'DELIVERED',
+                'bg-primary': l.status === 'SENT',
+                'bg-danger': l.status === 'FAILED'
+              }">{{ l.status }}</span>
+            </td>
+            <td class="text-end pe-4 text-muted small font-monospace">
+              {{ l.sentAt ? (l.sentAt | date:'short') : 'Just now' }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Test Dispatch Simulator Modal -->
+  <div *ngIf="showDispatchModal" class="modal-backdrop-custom d-flex align-items-center justify-content-center p-3">
+    <div class="card border-0 rounded-4 shadow-lg p-4 bg-white modal-dialog-custom">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+          <i class="bi bi-send-plus-fill text-primary"></i> Dispatch Test Notification
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDispatchModal()"></button>
+      </div>
+
+      <form (ngSubmit)="dispatch()">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Channel *</label>
+            <select class="form-select" [(ngModel)]="newNotification.channel" (ngModelChange)="onChannelChange()" name="channel">
+              <option value="SMS">SMS (Text Message)</option>
+              <option value="WHATSAPP">WhatsApp Business</option>
+              <option value="EMAIL">Email</option>
+              <option value="BROADCAST_ALARM">Hospital Broadcast Alert</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Trigger Event</label>
+            <select class="form-select" [(ngModel)]="newNotification.triggerEvent" name="triggerEvent">
+              <option value="APPOINTMENT_REMINDER">Appointment Reminder</option>
+              <option value="LAB_RESULT_READY">Lab Diagnostic Result Ready</option>
+              <option value="BILL_PAYMENT_CONFIRMATION">Billing Receipt</option>
+              <option value="PRESCRIPTION_DISPENSED">Pharmacy Dispensed</option>
+              <option value="CODE_BLUE_TEAM_SUMMON">Code Blue Resuscitation Summon</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Recipient Name *</label>
+            <input type="text" class="form-control" [(ngModel)]="newNotification.recipientName" name="recipientName" placeholder="e.g. David Miller" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Recipient Endpoint (Phone / Email) *</label>
+            <input type="text" class="form-control" [(ngModel)]="newNotification.recipientContact" name="recipientContact" required>
+          </div>
+
+          <div class="col-12" *ngIf="newNotification.channel === 'EMAIL'">
+            <label class="form-label small fw-semibold">Email Subject</label>
+            <input type="text" class="form-control" [(ngModel)]="newNotification.subject" name="subject">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Message Content *</label>
+            <textarea class="form-control" rows="3" [(ngModel)]="newNotification.message" name="message" required></textarea>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4 pt-2 border-top">
+          <button type="button" class="btn btn-light" (click)="closeDispatchModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="isDispatching">
+            <i class="bi bi-send-fill me-1"></i> Send Immediate Test
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

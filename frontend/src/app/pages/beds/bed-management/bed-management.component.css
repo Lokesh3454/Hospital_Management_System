@@ -1,0 +1,38 @@
+.kpi-clickable {
+  cursor: pointer;
+  transition: all 0.22s ease-in-out;
+  position: relative;
+}
+
+.kpi-clickable:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.1) !important;
+}
+
+.kpi-clickable.active-kpi {
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.35), 0 10px 20px rgba(0, 0, 0, 0.08) !important;
+  background-color: #f8fafc !important;
+}
+
+.kpi-filter-hint {
+  font-size: 0.75rem;
+}
+
+.bed-interactive-card {
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: #ffffff;
+}
+
+.bed-interactive-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+.bed-interactive-card:active {
+  transform: translateY(-1px);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}

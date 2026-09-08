@@ -1,0 +1,149 @@
+<div class="container-fluid py-4">
+  <!-- Loading state -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-success" role="status"></div>
+    <p class="text-muted mt-2">Loading prescription...</p>
+  </div>
+
+  <div *ngIf="!isLoading && prescription" class="row justify-content-center">
+    <div class="col-lg-10">
+      <!-- Top Action Bar -->
+      <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 print-hide">
+        <div>
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1 small">
+              <li class="breadcrumb-item"><a routerLink="/prescriptions">Prescriptions</a></li>
+              <li class="breadcrumb-item active">Rx #{{ prescription.id }}</li>
+            </ol>
+          </nav>
+          <h2 class="h3 fw-bold mb-0">Prescription Order #{{ prescription.id }}</h2>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-success" (click)="printPrescription()">
+            <i class="bi bi-printer me-1"></i>Print Rx Slip
+          </button>
+          <a *ngIf="canEdit" [routerLink]="['/prescriptions', prescription.id, 'edit']" class="btn btn-outline-primary">
+            <i class="bi bi-pencil me-1"></i>Edit
+          </a>
+          <a routerLink="/prescriptions" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back
+          </a>
+        </div>
+      </div>
+
+      <!-- Alert -->
+      <div *ngIf="errorMessage" class="alert alert-danger shadow-sm print-hide">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
+      </div>
+
+      <!-- ================= PROFESSIONAL PRINTABLE RX SLIP ================= -->
+      <div class="card border shadow-sm p-4 p-md-5 rx-slip-card bg-white">
+        <!-- Hospital Header -->
+        <div class="border-bottom pb-4 mb-4">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="d-flex align-items-center">
+              <div class="rx-hospital-icon bg-primary text-white me-3">
+                <i class="bi bi-hospital fs-2"></i>
+              </div>
+              <div>
+                <h3 class="fw-bold text-dark mb-0">CITY GENERAL HOSPITAL</h3>
+                <p class="text-muted small mb-0">Multi-Specialty Clinic & Advanced Patient Care Center</p>
+                <small class="text-secondary">Tel: +1-555-0100 &bull; 742 Evergreen Terrace, Springfield</small>
+              </div>
+            </div>
+            <div class="text-md-end">
+              <div class="badge bg-success-subtle text-success fs-6 px-3 py-2 border border-success-subtle mb-1">
+                Official Medical Prescription
+              </div>
+              <div class="small text-muted">Rx Number: <strong>#RX-{{ prescription.id }}</strong></div>
+              <div class="small text-muted">Date: <strong>{{ prescription.prescriptionDate }}</strong></div>
+              <div class="small text-muted" *ngIf="prescription.appointmentId">
+                Encounter: <strong>Appointment #{{ prescription.appointmentId }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Physician & Patient Subheader -->
+        <div class="row g-3 mb-4 p-3 bg-light rounded-3 border">
+          <div class="col-md-6 border-md-end">
+            <span class="text-muted small text-uppercase fw-semibold">Prescribing Physician</span>
+            <h5 class="fw-bold text-dark mb-0">{{ prescription.doctorName }}</h5>
+            <div class="text-primary small fw-semibold">{{ prescription.doctorSpecialization }}</div>
+            <div class="text-muted small" *ngIf="prescription.doctorDepartment">{{ prescription.doctorDepartment }}</div>
+            <div class="text-muted small" *ngIf="prescription.doctorRoomNumber">Clinic: {{ prescription.doctorRoomNumber }}</div>
+          </div>
+          <div class="col-md-6 ps-md-4">
+            <span class="text-muted small text-uppercase fw-semibold">Patient Information</span>
+            <h5 class="fw-bold text-dark mb-0">{{ prescription.patientName }}</h5>
+            <div class="text-muted small">
+              <span *ngIf="prescription.patientGender">{{ prescription.patientGender }} &bull; </span>
+              <span *ngIf="prescription.patientPhone">Phone: {{ prescription.patientPhone }}</span>
+            </div>
+            <div class="text-muted small" *ngIf="prescription.patientEmail">Email: {{ prescription.patientEmail }}</div>
+          </div>
+        </div>
+
+        <!-- Classic Rx Symbol Header -->
+        <div class="d-flex align-items-center mb-3">
+          <div class="rx-symbol text-primary fw-bold me-2">℞</div>
+          <span class="text-muted small text-uppercase fw-bold tracking-wider">Prescribed Medications & Administration Schedule</span>
+        </div>
+
+        <!-- Medications Table -->
+        <div class="table-responsive mb-4">
+          <table class="table table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 50px;" class="text-center">#</th>
+                <th>Medication Name</th>
+                <th>Dosage</th>
+                <th>Frequency</th>
+                <th>Duration</th>
+                <th>Instructions / Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of prescription.items; let i = index">
+                <td class="text-center fw-bold text-muted">{{ i + 1 }}</td>
+                <td class="fw-bold text-dark fs-6">{{ item.medicineName }}</td>
+                <td><span class="badge bg-light text-dark border">{{ item.dosage }}</span></td>
+                <td class="fw-semibold text-primary">{{ item.frequency }}</td>
+                <td>{{ item.duration }}</td>
+                <td class="text-secondary small">{{ item.instructions || 'As directed by physician' }}</td>
+              </tr>
+              <tr *ngIf="!prescription.items || prescription.items.length === 0">
+                <td colspan="6" class="text-center py-3 text-muted">
+                  No individual items recorded.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Doctor's Advice / Notes -->
+        <div class="mb-5 p-3 rounded-3 border bg-light" *ngIf="prescription.notes">
+          <h6 class="fw-bold text-dark mb-1"><i class="bi bi-info-circle me-1 text-primary"></i>Dietary & Clinical Advice:</h6>
+          <p class="mb-0 text-secondary" style="white-space: pre-wrap;">{{ prescription.notes }}</p>
+        </div>
+
+        <!-- Doctor Signature Block -->
+        <div class="mt-4 pt-4 border-top">
+          <div class="d-flex justify-content-between align-items-end">
+            <div class="small text-muted">
+              <div><i class="bi bi-shield-check text-success me-1"></i>Digitally verified electronic prescription</div>
+              <div>Hospital Management System (HMS) &bull; Clinical Rx v4.0</div>
+            </div>
+            <div class="text-center" style="width: 220px;">
+              <div class="signature-line border-bottom pb-1 mb-1 font-monospace text-primary fw-bold">
+                {{ prescription.doctorName }}
+              </div>
+              <small class="text-muted text-uppercase fw-semibold d-block">Authorized Medical Practitioner</small>
+              <small class="text-muted">License Verified</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,579 @@
+<div class="container py-4">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a routerLink="/patients" class="text-decoration-none">Patients</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ patient?.name || 'Patient Profile' }}</li>
+    </ol>
+  </nav>
+
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-teal" role="status"></div>
+    <div class="text-muted mt-2">Loading profile...</div>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="errorMessage">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ errorMessage }}
+  </div>
+
+  <div *ngIf="!isLoading && patient" class="row g-4">
+    <!-- Left Profile Column -->
+    <div class="col-12 col-lg-4">
+      <div class="card border-0 rounded-4 shadow-sm p-4 text-center bg-white mb-4">
+        <div class="profile-avatar mb-3 mx-auto">
+          <i class="bi bi-person-fill fs-1 text-teal"></i>
+        </div>
+        <h4 class="fw-bold text-dark mb-1">{{ patient.name }}</h4>
+        <div class="text-muted small mb-3">Patient Record #{{ patient.patientId || patient.id }}</div>
+
+        <div class="d-flex justify-content-center gap-2 mb-3">
+          <span class="badge bg-danger-subtle text-danger px-3 py-2 fs-6">Blood: {{ patient.bloodGroup || 'Unknown' }}</span>
+          <span class="badge bg-light text-dark border px-3 py-2 fs-6">{{ patient.gender || 'Not specified' }}</span>
+        </div>
+
+        <!-- Clinical Safety: Allergy Warning Badge -->
+        <div class="text-start mb-3 p-3 rounded-3" [ngClass]="patient.allergies ? 'bg-danger-subtle border border-danger-subtle' : 'bg-light border'">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="bi" [ngClass]="patient.allergies ? 'bi-shield-fill-exclamation text-danger fs-5' : 'bi-shield-check text-success fs-5'"></i>
+            <span class="fw-bold small" [ngClass]="patient.allergies ? 'text-danger' : 'text-success'">
+              {{ patient.allergies ? 'DOCUMENTED ALLERGIES' : 'NO KNOWN ALLERGIES' }}
+            </span>
+          </div>
+          <div *ngIf="patient.allergies" class="fw-bold text-dark small">
+            {{ patient.allergies }}
+          </div>
+        </div>
+
+        <!-- Chronic Medical Conditions -->
+        <div *ngIf="patient.chronicConditions" class="text-start mb-3 p-3 rounded-3 bg-warning-subtle border border-warning-subtle">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="bi bi-heart-pulse-fill text-warning-emphasis fs-5"></i>
+            <span class="fw-bold small text-warning-emphasis">CHRONIC CONDITIONS</span>
+          </div>
+          <div class="fw-bold text-dark small">
+            {{ patient.chronicConditions }}
+          </div>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button (click)="openHealthCardModal()" class="btn btn-outline-primary rounded-pill d-flex align-items-center justify-content-center gap-2">
+            <i class="bi bi-qr-code"></i> Digital Health Card (QR Pass)
+          </button>
+          <button (click)="openAiBriefModal()" class="btn btn-outline-info rounded-pill d-flex align-items-center justify-content-center gap-2">
+            <i class="bi bi-cpu-fill"></i> AI Clinical Brief
+          </button>
+          <a *ngIf="canManagePatients" [routerLink]="['/patients', patient.patientId || patient.id, 'edit']" class="btn btn-primary rounded-pill">
+            <i class="bi bi-pencil me-1"></i> Edit Profile
+          </a>
+          <button *ngIf="canRecordClinicalData" (click)="openVitalsModal()" class="btn btn-outline-success rounded-pill">
+            <i class="bi bi-activity me-1"></i> + Record Vitals
+          </button>
+          <button *ngIf="canDeletePatient && !isConfirmingDelete" (click)="requestDeletePatient()" class="btn btn-outline-danger rounded-pill">
+            <i class="bi bi-trash me-1"></i> Delete Patient
+          </button>
+        </div>
+
+        <!-- Inline Delete Confirmation Panel (No browser popups) -->
+        <div *ngIf="isConfirmingDelete" class="mt-3 p-3 rounded-4 bg-danger bg-opacity-10 border border-danger text-start">
+          <div class="d-flex align-items-center gap-2 mb-2 text-danger fw-bold">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Delete Patient & All Records?</span>
+          </div>
+          <p class="small text-dark mb-3">
+            This will permanently delete <strong>{{ patient.name }}</strong>'s profile along with all associated visits, vitals, lab orders, prescriptions, and medical records.
+          </p>
+          <div class="d-flex gap-2">
+            <button class="btn btn-danger btn-sm rounded-pill flex-fill fw-bold" (click)="confirmDelete()" [disabled]="isDeleting">
+              <span *ngIf="isDeleting" class="spinner-border spinner-border-sm me-1"></span>
+              Yes, Delete
+            </button>
+            <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" (click)="cancelDelete()" [disabled]="isDeleting">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emergency Contact Card -->
+      <div class="card border-0 rounded-4 shadow-sm p-4 bg-danger-subtle border border-danger-subtle">
+        <h6 class="fw-bold text-danger mb-1">
+          <i class="bi bi-telephone-plus-fill me-2"></i>Emergency Contact
+        </h6>
+        <div class="fs-5 fw-bold text-dark">{{ patient.emergencyContact || 'None Listed' }}</div>
+        <a *ngIf="patient.emergencyContact" [href]="'tel:' + patient.emergencyContact" class="btn btn-danger rounded-pill px-4 mt-3">
+          <i class="bi bi-telephone-outbound me-1"></i> Call Contact
+        </a>
+      </div>
+    </div>
+
+    <!-- Right Content Column with Tabs -->
+    <div class="col-12 col-lg-8">
+      <!-- Navigation Pills -->
+      <ul class="nav nav-pills mb-3 gap-2 bg-light p-2 rounded-4">
+        <li class="nav-item">
+          <button class="nav-link rounded-pill" [class.active]="activeTab === 'overview'" (click)="activeTab = 'overview'">
+            <i class="bi bi-person-lines-fill me-1"></i> Overview
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link rounded-pill" [class.active]="activeTab === 'vitals'" (click)="activeTab = 'vitals'">
+            <i class="bi bi-activity me-1"></i> Vitals Tracker ({{ vitalsList.length }})
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link rounded-pill" [class.active]="activeTab === 'labs'" (click)="activeTab = 'labs'">
+            <i class="bi bi-flask-fill me-1"></i> Lab Reports ({{ labTests.length }})
+          </button>
+        </li>
+      </ul>
+
+      <!-- Tab 1: Overview -->
+      <div *ngIf="activeTab === 'overview'">
+        <!-- Demographics -->
+        <div class="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
+          <h5 class="fw-bold text-dark border-bottom pb-3 mb-3">
+            <i class="bi bi-card-checklist text-primary me-2"></i>Demographics & Contact Information
+          </h5>
+
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="text-muted small">Date of Birth</label>
+              <div class="fw-semibold text-dark">{{ patient.dateOfBirth || 'Not provided' }}</div>
+            </div>
+            <div class="col-sm-6">
+              <label class="text-muted small">Phone Number</label>
+              <div class="fw-semibold text-dark">{{ patient.phone }}</div>
+            </div>
+            <div class="col-sm-6">
+              <label class="text-muted small">Email Address</label>
+              <div class="fw-semibold text-dark">{{ patient.email }}</div>
+            </div>
+            <div class="col-sm-6">
+              <label class="text-muted small">Registered Since</label>
+              <div class="fw-semibold text-dark">{{ patient.createdAt ? (patient.createdAt | date:'mediumDate') : 'Today' }}</div>
+            </div>
+            <div class="col-12">
+              <label class="text-muted small">Residential Address</label>
+              <div class="fw-semibold text-dark">{{ patient.address || 'No address registered' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Latest Vitals Snapshot Card -->
+        <div *ngIf="latestVitals" class="card border-0 rounded-4 shadow-sm p-4 bg-white">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold text-dark mb-0">
+              <i class="bi bi-heart-pulse text-danger me-2"></i>Latest Vitals Snapshot
+            </h5>
+            <span class="text-muted small">{{ latestVitals.recordedAt | date:'medium' }}</span>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-6 col-md-3">
+              <div class="p-3 bg-light rounded-3 text-center">
+                <div class="small text-muted">Blood Pressure</div>
+                <div class="h5 fw-bold text-dark mb-0">{{ latestVitals.systolicBP }}/{{ latestVitals.diastolicBP }}</div>
+                <div class="badge bg-primary-subtle text-primary mt-1">mmHg</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="p-3 bg-light rounded-3 text-center">
+                <div class="small text-muted">Heart Rate</div>
+                <div class="h5 fw-bold text-danger mb-0">{{ latestVitals.heartRate }}</div>
+                <div class="badge bg-danger-subtle text-danger mt-1">bpm</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="p-3 bg-light rounded-3 text-center">
+                <div class="small text-muted">Oxygen (SpO2)</div>
+                <div class="h5 fw-bold text-success mb-0">{{ latestVitals.spo2 }}%</div>
+                <div class="badge bg-success-subtle text-success mt-1">Optimal</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="p-3 bg-light rounded-3 text-center">
+                <div class="small text-muted">Body Temp</div>
+                <div class="h5 fw-bold text-warning-emphasis mb-0">{{ latestVitals.temperature }}°F</div>
+                <div class="badge bg-warning-subtle text-warning-emphasis mt-1">Oral</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Vitals & Health Trends -->
+      <div *ngIf="activeTab === 'vitals'">
+        <div class="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+              <h5 class="fw-bold text-dark mb-0">Vital Signs Health Log</h5>
+              <p class="text-muted small mb-0">Track clinical trends, cardiovascular markers, and BMI history</p>
+            </div>
+            <button *ngIf="canRecordClinicalData" (click)="openVitalsModal()" class="btn btn-primary rounded-pill px-3 shadow-sm">
+              <i class="bi bi-plus-circle me-1"></i> Record New Vitals
+            </button>
+          </div>
+
+          <div *ngIf="vitalsList.length === 0" class="text-center py-5 text-muted">
+            <i class="bi bi-activity fs-1 d-block mb-2 text-secondary"></i>
+            <p>No vitals recorded yet for this patient.</p>
+          </div>
+
+          <div *ngIf="vitalsList.length > 0" class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Recorded At</th>
+                  <th>BP (Sys/Dia)</th>
+                  <th>Heart Rate</th>
+                  <th>SpO2</th>
+                  <th>Temp</th>
+                  <th>BMI</th>
+                  <th>Recorded By</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let v of vitalsList">
+                  <td><span class="fw-semibold">{{ v.recordedAt | date:'short' }}</span></td>
+                  <td>
+                    <span class="badge px-2 py-1" [ngClass]="(v.systolicBP || 0) > 130 ? 'bg-warning-subtle text-warning-emphasis' : 'bg-primary-subtle text-primary'">
+                      {{ v.systolicBP }}/{{ v.diastolicBP }} mmHg
+                    </span>
+                  </td>
+                  <td><strong>{{ v.heartRate }}</strong> bpm</td>
+                  <td><span class="text-success fw-bold">{{ v.spo2 }}%</span></td>
+                  <td>{{ v.temperature }}°F</td>
+                  <td>
+                    <span class="fw-semibold">{{ v.bmi }}</span>
+                    <span class="badge ms-1" [ngClass]="getBmiCategory(v.bmi).colorClass">
+                      {{ getBmiCategory(v.bmi).text }}
+                    </span>
+                  </td>
+                  <td class="small text-muted">{{ v.recordedBy }}</td>
+                  <td class="small text-secondary">{{ v.notes || '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Diagnostic Lab Reports -->
+      <div *ngIf="activeTab === 'labs'">
+        <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+              <h5 class="fw-bold text-dark mb-0">Diagnostic Lab Reports</h5>
+              <p class="text-muted small mb-0">Pathology, radiology, and biochemical investigations</p>
+            </div>
+            <a routerLink="/lab" class="btn btn-outline-primary rounded-pill btn-sm">
+              <i class="bi bi-box-arrow-up-right me-1"></i> Open Diagnostics Hub
+            </a>
+          </div>
+
+          <div *ngIf="labTests.length === 0" class="text-center py-5 text-muted">
+            <i class="bi bi-clipboard2-pulse fs-1 d-block mb-2 text-secondary"></i>
+            <p>No lab tests ordered yet for this patient.</p>
+          </div>
+
+          <div *ngIf="labTests.length > 0" class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Test Code & Name</th>
+                  <th>Status</th>
+                  <th>Result</th>
+                  <th>Reference Range</th>
+                  <th>Interpretation</th>
+                  <th>Ordered On</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let lt of labTests">
+                  <td>
+                    <div class="fw-bold text-dark">{{ lt.testName }}</div>
+                    <div class="small text-muted font-monospace">{{ lt.testCode }} | {{ lt.category }}</div>
+                  </td>
+                  <td>
+                    <span class="badge px-3 py-1 rounded-pill" [ngClass]="lt.status === 'COMPLETED' ? 'bg-success text-white' : 'bg-warning-subtle text-dark'">
+                      {{ lt.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <strong [ngClass]="lt.interpretation === 'Elevated' || lt.interpretation === 'Critical' ? 'text-danger' : 'text-dark'">
+                      {{ lt.resultValue || 'Pending' }}
+                    </strong>
+                  </td>
+                  <td class="small text-muted">{{ lt.normalRange || '-' }}</td>
+                  <td>
+                    <span *ngIf="lt.interpretation" class="badge" [ngClass]="lt.interpretation === 'Normal' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+                      {{ lt.interpretation }}
+                    </span>
+                  </td>
+                  <td class="small text-muted">{{ lt.orderDate | date:'mediumDate' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Record New Vitals (Zero reset buttons!) -->
+<div *ngIf="showVitalsModal" class="modal-backdrop fade show"></div>
+<div *ngIf="showVitalsModal" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold text-dark">
+          <i class="bi bi-activity text-primary me-2"></i>Record Clinical Vitals
+        </h5>
+        <button type="button" class="btn-close" (click)="closeVitalsModal()"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <div *ngIf="vitalsMessage" class="alert alert-danger">{{ vitalsMessage }}</div>
+
+        <form (ngSubmit)="saveVitals()">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Systolic BP (mmHg)</label>
+              <input type="number" class="form-control rounded-3" [(ngModel)]="newVitals.systolicBP" name="systolicBP" placeholder="e.g. 120" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Diastolic BP (mmHg)</label>
+              <input type="number" class="form-control rounded-3" [(ngModel)]="newVitals.diastolicBP" name="diastolicBP" placeholder="e.g. 80" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Heart Rate (bpm)</label>
+              <input type="number" class="form-control rounded-3" [(ngModel)]="newVitals.heartRate" name="heartRate" placeholder="e.g. 72" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Oxygen Saturation SpO2 (%)</label>
+              <input type="number" class="form-control rounded-3" [(ngModel)]="newVitals.spo2" name="spo2" placeholder="e.g. 99" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Body Temperature (°F)</label>
+              <input type="number" step="0.1" class="form-control rounded-3" [(ngModel)]="newVitals.temperature" name="temperature" placeholder="e.g. 98.6" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Respiratory Rate (breaths/min)</label>
+              <input type="number" class="form-control rounded-3" [(ngModel)]="newVitals.respiratoryRate" name="respiratoryRate" placeholder="e.g. 16">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Weight (kg)</label>
+              <input type="number" step="0.1" class="form-control rounded-3" [(ngModel)]="newVitals.weightKg" name="weightKg" placeholder="e.g. 68.5">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Height (cm)</label>
+              <input type="number" step="0.1" class="form-control rounded-3" [(ngModel)]="newVitals.heightCm" name="heightCm" placeholder="e.g. 172.0">
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold">Clinical Staff Notes</label>
+              <textarea class="form-control rounded-3" rows="2" [(ngModel)]="newVitals.notes" name="notes" placeholder="Patient observations, posture, fasting state..."></textarea>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" (click)="closeVitalsModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" [disabled]="isSavingVitals">
+              <span *ngIf="isSavingVitals" class="spinner-border spinner-border-sm me-1"></span>
+              Save Vitals
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Digital Health Card & QR Pass Modal -->
+  <div *ngIf="showHealthCardModal && patient" class="health-card-backdrop d-flex align-items-center justify-content-center p-3">
+    <div class="health-card-modal-content card border-0 rounded-4 shadow-2xl p-4 bg-white">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+          <i class="bi bi-person-vcard-fill text-primary"></i> Digital Patient Health Card & QR Pass
+        </h5>
+        <button type="button" class="btn-close" (click)="closeHealthCardModal()"></button>
+      </div>
+
+      <!-- Printable Smart Card -->
+      <div class="smart-health-card rounded-4 p-4 text-white shadow-lg position-relative overflow-hidden mb-3">
+        <div class="card-glow-circle"></div>
+        <div class="d-flex justify-content-between align-items-start position-relative z-1 mb-3">
+          <div>
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-hospital text-info fs-4"></i>
+              <span class="fw-bold tracking-wider fs-6">ANTIGRAVITY HEALTH NETWORK</span>
+            </div>
+            <span class="text-white-50 x-small">Official Patient Identity & Medical Pass</span>
+          </div>
+          <span class="badge bg-info-subtle text-info fw-bold px-2 py-1">SMART-PASS</span>
+        </div>
+
+        <div class="row align-items-center position-relative z-1">
+          <div class="col-8">
+            <h4 class="fw-black text-white mb-1">{{ patient.name }}</h4>
+            <div class="font-monospace text-info small mb-2">UHID: {{ getUhid() }}</div>
+            <div class="d-flex gap-2 mb-2">
+              <span class="badge bg-white bg-opacity-20 text-white">Blood: {{ patient.bloodGroup || 'O+' }}</span>
+              <span class="badge bg-white bg-opacity-20 text-white">{{ patient.gender }} • {{ getPatientAge() }}y</span>
+            </div>
+            <div class="text-white-50 x-small">
+              <strong>Emergency Contact:</strong> {{ patient.emergencyContact || '+1-555-0199' }}
+            </div>
+          </div>
+
+          <!-- Dynamic SVG QR Code -->
+          <div class="col-4 text-center">
+            <div class="qr-code-box bg-white p-2 rounded-3 d-inline-block shadow-sm">
+              <svg width="100" height="100" viewBox="0 0 100 100" fill="black" xmlns="http://www.w3.org/2000/svg">
+                <!-- Top-Left Finder -->
+                <rect x="5" y="5" width="28" height="28" fill="#0f172a" rx="4"/>
+                <rect x="11" y="11" width="16" height="16" fill="white" rx="2"/>
+                <rect x="15" y="15" width="8" height="8" fill="#0f172a"/>
+
+                <!-- Top-Right Finder -->
+                <rect x="67" y="5" width="28" height="28" fill="#0f172a" rx="4"/>
+                <rect x="73" y="11" width="16" height="16" fill="white" rx="2"/>
+                <rect x="77" y="15" width="8" height="8" fill="#0f172a"/>
+
+                <!-- Bottom-Left Finder -->
+                <rect x="5" y="67" width="28" height="28" fill="#0f172a" rx="4"/>
+                <rect x="11" y="73" width="16" height="16" fill="white" rx="2"/>
+                <rect x="15" y="77" width="8" height="8" fill="#0f172a"/>
+
+                <!-- Data Matrix Modules -->
+                <rect x="38" y="8" width="6" height="6" fill="#0f172a"/>
+                <rect x="48" y="12" width="6" height="6" fill="#0f172a"/>
+                <rect x="56" y="6" width="6" height="6" fill="#0f172a"/>
+                <rect x="40" y="24" width="6" height="6" fill="#0f172a"/>
+                <rect x="50" y="22" width="6" height="6" fill="#0f172a"/>
+                <rect x="10" y="40" width="6" height="6" fill="#0f172a"/>
+                <rect x="22" y="44" width="6" height="6" fill="#0f172a"/>
+                <rect x="36" y="38" width="6" height="6" fill="#0f172a"/>
+                <rect x="46" y="42" width="6" height="6" fill="#0f172a"/>
+                <rect x="58" y="40" width="6" height="6" fill="#0f172a"/>
+                <rect x="72" y="38" width="6" height="6" fill="#0f172a"/>
+                <rect x="84" y="44" width="6" height="6" fill="#0f172a"/>
+                <rect x="38" y="54" width="6" height="6" fill="#0f172a"/>
+                <rect x="52" y="56" width="6" height="6" fill="#0f172a"/>
+                <rect x="68" y="58" width="6" height="6" fill="#0f172a"/>
+                <rect x="82" y="52" width="6" height="6" fill="#0f172a"/>
+                <rect x="40" y="72" width="6" height="6" fill="#0f172a"/>
+                <rect x="54" y="76" width="6" height="6" fill="#0f172a"/>
+                <rect x="70" y="74" width="6" height="6" fill="#0f172a"/>
+                <rect x="82" y="80" width="6" height="6" fill="#0f172a"/>
+              </svg>
+            </div>
+            <div class="text-white-50 x-small mt-1">Scan for Fast Kiosk Check-In</div>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-2 border-top border-white border-opacity-10 d-flex justify-content-between align-items-center position-relative z-1">
+          <span class="x-small text-white-50">Authorized by Antigravity HMS</span>
+          <span class="x-small text-info"><i class="bi bi-shield-lock-fill me-1"></i> 256-bit Encrypted PHI</span>
+        </div>
+      </div>
+
+      <!-- Telehealth Virtual Waiting Room Status -->
+      <div class="card border border-primary-subtle bg-primary-subtle p-3 rounded-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="fw-bold text-primary mb-0 d-flex align-items-center gap-2">
+              <i class="bi bi-camera-video-fill"></i> Telehealth OPD Virtual Waiting Room
+            </h6>
+            <div class="text-muted small mt-1">
+              <span *ngIf="telehealthActive">
+                You are currently queued. <strong>Position #{{ telehealthPosition }}</strong> in queue (Est. wait 8 mins).
+              </span>
+              <span *ngIf="!telehealthActive">
+                Virtual consultation booth available. Connect with duty doctor.
+              </span>
+            </div>
+          </div>
+          <div>
+            <button *ngIf="!telehealthActive" class="btn btn-sm btn-primary rounded-pill px-3" (click)="joinTelehealthQueue()">
+              <i class="bi bi-box-arrow-in-right me-1"></i> Join Queue
+            </button>
+            <button *ngIf="telehealthActive" class="btn btn-sm btn-outline-danger rounded-pill px-3" (click)="leaveTelehealthQueue()">
+              Leave Queue
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-light rounded-pill px-3" (click)="closeHealthCardModal()">Close</button>
+        <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm" (click)="printHealthCard()">
+          <i class="bi bi-printer-fill me-1"></i> Print / Download Pass
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Clinical Brief Modal -->
+  <div *ngIf="showAiBriefModal" class="health-card-backdrop d-flex align-items-center justify-content-center p-3">
+    <div class="card border-0 rounded-4 shadow-2xl p-4 bg-white modal-dialog-custom" style="max-width: 680px; width: 100%;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+          <i class="bi bi-robot text-primary"></i> AI Clinical Decision Support Brief
+        </h5>
+        <button type="button" class="btn-close" (click)="closeAiBriefModal()"></button>
+      </div>
+
+      <div *ngIf="isLoadingAiBrief" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="text-muted mt-2">Synthesizing clinical encounter history, vitals & allergies...</p>
+      </div>
+
+      <div *ngIf="!isLoadingAiBrief && clinicalBrief">
+        <div class="p-3 bg-light rounded-3 mb-3">
+          <div class="fw-bold text-dark fs-5">{{ clinicalBrief.patientName }}</div>
+          <div class="text-muted small">{{ clinicalBrief.ageGender }} • Blood Group: {{ clinicalBrief.bloodGroup }}</div>
+        </div>
+
+        <div class="mb-3">
+          <h6 class="fw-bold text-primary small text-uppercase mb-2">Active Vitals Summary</h6>
+          <div class="p-2 border rounded-3 bg-white font-monospace small">
+            {{ clinicalBrief.latestVitalsSummary }}
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <h6 class="fw-bold text-danger small text-uppercase mb-2">Known Contraindications & Allergies</h6>
+          <div class="d-flex flex-wrap gap-2">
+            <span *ngFor="let a of clinicalBrief.activeAllergies" class="badge bg-danger-subtle text-danger px-2 py-1">
+              <i class="bi bi-exclamation-octagon-fill me-1"></i> {{ a }}
+            </span>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <h6 class="fw-bold text-dark small text-uppercase mb-2">Documented Chronic Conditions</h6>
+          <div class="d-flex flex-wrap gap-2">
+            <span *ngFor="let c of clinicalBrief.chronicConditions" class="badge bg-warning-subtle text-dark px-2 py-1">
+              <i class="bi bi-heart-pulse-fill me-1"></i> {{ c }}
+            </span>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <h6 class="fw-bold text-success small text-uppercase mb-2">AI Diagnostic & Care Highlights</h6>
+          <ul class="list-group list-group-flush border rounded-3">
+            <li *ngFor="let h of clinicalBrief.clinicalHighlights" class="list-group-item small py-2 d-flex align-items-center gap-2">
+              <i class="bi bi-check-circle-fill text-success"></i> {{ h }}
+            </li>
+          </ul>
+        </div>
+
+        <div class="d-flex justify-content-end">
+          <button type="button" class="btn btn-primary rounded-pill px-4" (click)="closeAiBriefModal()">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

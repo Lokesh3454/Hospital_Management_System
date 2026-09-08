@@ -1,0 +1,326 @@
+<div class="container-fluid py-4 roster-wrapper">
+  <!-- Breadcrumbs & Header -->
+  <div class="row align-items-center mb-4">
+    <div class="col-md-7">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a [routerLink]="authService.getDashboardRouteForUser()" class="text-decoration-none">Dashboard</a></li>
+          <li class="breadcrumb-item"><a routerLink="/operations" class="text-decoration-none">Operations Hub</a></li>
+          <li class="breadcrumb-item active text-primary fw-semibold" aria-current="page">Staff Duty Roster</li>
+        </ol>
+      </nav>
+      <h2 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+        <i class="bi bi-people-fill text-primary fs-2"></i>
+        Staff Rostering & Shift Management
+      </h2>
+      <p class="text-muted small mb-0">Multi-shift rota, 24/7 clinical staffing coverage, and Emergency On-Call Specialist quick dispatch</p>
+    </div>
+
+    <div class="col-md-5 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end gap-2">
+      <button class="btn btn-outline-primary d-flex align-items-center gap-2" (click)="loadShifts()">
+        <i class="bi bi-arrow-clockwise" [class.spin]="isLoading"></i> Refresh Roster
+      </button>
+      <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" (click)="openAddModal()">
+        <i class="bi bi-person-plus-fill"></i> Assign Staff Shift
+      </button>
+    </div>
+  </div>
+
+  <!-- Telemetry Counter Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100 border-start border-danger border-4">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-danger small fw-semibold text-uppercase">Emergency On-Call</div>
+            <h3 class="fw-bold mb-0 mt-1 text-danger">{{ onCallCount }}</h3>
+            <span class="text-muted x-small">Immediate Response Ready</span>
+          </div>
+          <div class="stat-icon-wrapper bg-danger-subtle text-danger rounded-circle p-3">
+            <i class="bi bi-telephone-inbound-fill fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-warning-emphasis small fw-semibold text-uppercase">Morning Shift</div>
+            <h3 class="fw-bold mb-0 mt-1 text-dark">{{ morningCount }}</h3>
+            <span class="text-muted x-small">07:00 – 15:00</span>
+          </div>
+          <div class="stat-icon-wrapper bg-warning-subtle text-warning rounded-circle p-3">
+            <i class="bi bi-sun-fill fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-primary small fw-semibold text-uppercase">Evening Shift</div>
+            <h3 class="fw-bold mb-0 mt-1 text-dark">{{ eveningCount }}</h3>
+            <span class="text-muted x-small">15:00 – 23:00</span>
+          </div>
+          <div class="stat-icon-wrapper bg-primary-subtle text-primary rounded-circle p-3">
+            <i class="bi bi-sunset-fill fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold text-uppercase">Night Shift</div>
+            <h3 class="fw-bold mb-0 mt-1 text-dark">{{ nightCount }}</h3>
+            <span class="text-muted x-small">23:00 – 07:00</span>
+          </div>
+          <div class="stat-icon-wrapper bg-secondary-subtle text-secondary rounded-circle p-3">
+            <i class="bi bi-moon-stars-fill fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div *ngIf="successMessage" class="alert alert-success border-0 rounded-3 shadow-sm alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i> {{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = null"></button>
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-danger border-0 rounded-3 shadow-sm alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+  </div>
+
+  <!-- On-Call Emergency Specialist Quick Directory -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h5 class="fw-bold text-danger mb-0 d-flex align-items-center gap-2">
+          <i class="bi bi-broadcast"></i> On-Call Emergency Specialists
+        </h5>
+        <span class="text-muted small">Specialists available for immediate trauma, code blue, and surgical summons</span>
+      </div>
+      <span class="badge bg-danger px-3 py-2 rounded-pill">{{ onCallSpecialists.length }} Active</span>
+    </div>
+
+    <div class="row g-3">
+      <div *ngFor="let s of onCallSpecialists" class="col-md-6 col-lg-4">
+        <div class="p-3 border border-danger-subtle bg-danger-subtle rounded-3 d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fw-bold text-dark">{{ s.staffName }}</div>
+            <div class="text-muted x-small">{{ s.roleTitle }} • {{ s.department }}</div>
+            <div class="text-danger small mt-1">
+              <i class="bi bi-telephone-fill me-1"></i> {{ s.contactPhone || 'Speed Dial #9' }}
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-danger" (click)="toggleOnCall(s)" title="Click to release from On-Call duty">
+            Release
+          </button>
+        </div>
+      </div>
+      <div *ngIf="onCallSpecialists.length === 0" class="col-12 text-center text-muted py-3">
+        No specialists are currently designated on-call.
+      </div>
+    </div>
+  </div>
+
+  <!-- Day Selector Toolbar -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-9">
+        <label class="form-label small text-muted fw-semibold mb-1">Select Duty Roster Day</label>
+        <div class="d-flex flex-wrap gap-1">
+          <button type="button" class="btn btn-sm" [ngClass]="selectedDay === 'ALL' ? 'btn-primary' : 'btn-outline-secondary'" (click)="selectedDay = 'ALL'">Whole Week</button>
+          <button *ngFor="let day of daysOfWeek" type="button" class="btn btn-sm" [ngClass]="selectedDay === day ? 'btn-primary' : 'btn-outline-secondary'" (click)="selectedDay = day">{{ day }}</button>
+        </div>
+      </div>
+
+      <div class="col-md-3 text-md-end">
+        <span class="text-muted small">Showing <strong>{{ filteredShifts.length }}</strong> shifts</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading Roster...</span>
+    </div>
+    <p class="text-muted mt-2">Loading shift rosters...</p>
+  </div>
+
+  <!-- 3-Shift Grid -->
+  <div *ngIf="!isLoading" class="row g-4">
+    <!-- Morning Shift Column -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 bg-white h-100 p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+          <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-sun-fill text-warning fs-5"></i> Morning Shift
+          </h6>
+          <span class="badge bg-warning-subtle text-dark">07:00 – 15:00</span>
+        </div>
+
+        <div *ngIf="getShiftsByType('MORNING').length === 0" class="text-muted text-center py-4 small">
+          No staff assigned for morning shift.
+        </div>
+
+        <div *ngFor="let s of getShiftsByType('MORNING')" class="p-3 mb-2 rounded-3 border bg-light shift-card">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div class="fw-bold text-dark">{{ s.staffName }}</div>
+              <div class="text-muted small">{{ s.roleTitle }}</div>
+              <div class="badge bg-primary-subtle text-primary mt-1">{{ s.department }}</div>
+              <div class="text-muted x-small mt-1">{{ s.dayOfWeek }}</div>
+            </div>
+            <div class="text-end">
+              <button class="btn btn-sm" [ngClass]="s.onCall ? 'btn-danger' : 'btn-outline-secondary'" (click)="toggleOnCall(s)">
+                {{ s.onCall ? 'ON-CALL' : 'Set On-Call' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Evening Shift Column -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 bg-white h-100 p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+          <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-sunset-fill text-primary fs-5"></i> Evening Shift
+          </h6>
+          <span class="badge bg-primary-subtle text-primary">15:00 – 23:00</span>
+        </div>
+
+        <div *ngIf="getShiftsByType('EVENING').length === 0" class="text-muted text-center py-4 small">
+          No staff assigned for evening shift.
+        </div>
+
+        <div *ngFor="let s of getShiftsByType('EVENING')" class="p-3 mb-2 rounded-3 border bg-light shift-card">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div class="fw-bold text-dark">{{ s.staffName }}</div>
+              <div class="text-muted small">{{ s.roleTitle }}</div>
+              <div class="badge bg-primary-subtle text-primary mt-1">{{ s.department }}</div>
+              <div class="text-muted x-small mt-1">{{ s.dayOfWeek }}</div>
+            </div>
+            <div class="text-end">
+              <button class="btn btn-sm" [ngClass]="s.onCall ? 'btn-danger' : 'btn-outline-secondary'" (click)="toggleOnCall(s)">
+                {{ s.onCall ? 'ON-CALL' : 'Set On-Call' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Night Shift Column -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 bg-white h-100 p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+          <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-moon-stars-fill text-secondary fs-5"></i> Night Shift
+          </h6>
+          <span class="badge bg-secondary-subtle text-secondary">23:00 – 07:00</span>
+        </div>
+
+        <div *ngIf="getShiftsByType('NIGHT').length === 0" class="text-muted text-center py-4 small">
+          No staff assigned for night shift.
+        </div>
+
+        <div *ngFor="let s of getShiftsByType('NIGHT')" class="p-3 mb-2 rounded-3 border bg-light shift-card">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div class="fw-bold text-dark">{{ s.staffName }}</div>
+              <div class="text-muted small">{{ s.roleTitle }}</div>
+              <div class="badge bg-primary-subtle text-primary mt-1">{{ s.department }}</div>
+              <div class="text-muted x-small mt-1">{{ s.dayOfWeek }}</div>
+            </div>
+            <div class="text-end">
+              <button class="btn btn-sm" [ngClass]="s.onCall ? 'btn-danger' : 'btn-outline-secondary'" (click)="toggleOnCall(s)">
+                {{ s.onCall ? 'ON-CALL' : 'Set On-Call' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Shift Modal -->
+  <div *ngIf="showAddModal" class="modal-backdrop-custom d-flex align-items-center justify-content-center p-3">
+    <div class="card border-0 rounded-4 shadow-lg p-4 bg-white modal-dialog-custom">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+          <i class="bi bi-person-badge-fill text-primary"></i> Assign Staff Shift
+        </h5>
+        <button type="button" class="btn-close" (click)="closeAddModal()"></button>
+      </div>
+
+      <form (ngSubmit)="saveShift()">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Staff Member Name *</label>
+            <input type="text" class="form-control" [(ngModel)]="newShift.staffName" name="staffName" placeholder="e.g. Dr. Kavita Nair" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Role Title *</label>
+            <input type="text" class="form-control" [(ngModel)]="newShift.roleTitle" name="roleTitle" placeholder="e.g. Consultant Intensivist">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Clinical Department *</label>
+            <select class="form-select" [(ngModel)]="newShift.department" name="department">
+              <option value="Emergency & Trauma">Emergency & Trauma</option>
+              <option value="Intensive Care Unit (ICU)">Intensive Care Unit (ICU)</option>
+              <option value="Operation Theater">Operation Theater</option>
+              <option value="General Medicine">General Medicine</option>
+              <option value="Cardiology">Cardiology</option>
+              <option value="Inpatient Ward">Inpatient Ward</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Day of Week *</label>
+            <select class="form-select" [(ngModel)]="newShift.dayOfWeek" name="dayOfWeek">
+              <option *ngFor="let day of daysOfWeek" [value]="day">{{ day }}</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Shift Timing *</label>
+            <select class="form-select" [(ngModel)]="newShift.shiftType" (ngModelChange)="onShiftTypeChange()" name="shiftType">
+              <option value="MORNING">Morning (07:00 – 15:00)</option>
+              <option value="EVENING">Evening (15:00 – 23:00)</option>
+              <option value="NIGHT">Night (23:00 – 07:00)</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Contact / Beeper Phone</label>
+            <input type="text" class="form-control" [(ngModel)]="newShift.contactPhone" name="contactPhone" placeholder="+1-555-0199">
+          </div>
+
+          <div class="col-12">
+            <div class="form-check form-switch mt-2">
+              <input class="form-check-input" type="checkbox" id="onCallSwitch" [(ngModel)]="newShift.onCall" name="onCall">
+              <label class="form-check-label fw-semibold" for="onCallSwitch">Designate as Emergency On-Call Specialist</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4 pt-2 border-top">
+          <button type="button" class="btn btn-light" (click)="closeAddModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">Save to Roster</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

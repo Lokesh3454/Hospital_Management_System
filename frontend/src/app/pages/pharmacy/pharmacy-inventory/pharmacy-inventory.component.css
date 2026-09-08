@@ -1,0 +1,29 @@
+.table th {
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.kpi-clickable {
+  cursor: pointer;
+  transition: all 0.22s ease-in-out;
+}
+
+.kpi-clickable:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.1) !important;
+}
+
+.kpi-clickable.active-kpi {
+  box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.35), 0 10px 20px rgba(0, 0, 0, 0.08) !important;
+  background-color: #f8fafc !important;
+}
+
+.med-interactive-row {
+  transition: background-color 0.15s ease;
+}
+
+.med-interactive-row:hover {
+  background-color: #f1f5f9 !important;
+}

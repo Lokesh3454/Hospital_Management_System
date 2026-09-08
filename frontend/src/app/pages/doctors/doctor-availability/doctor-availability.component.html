@@ -1,0 +1,131 @@
+<div class="container py-4">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a routerLink="/doctors" class="text-decoration-none">Doctors</a></li>
+      <li class="breadcrumb-item"><a [routerLink]="['/doctors', doctorId]" class="text-decoration-none">{{ doctor?.name || 'Doctor' }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Availability Schedule</li>
+    </ol>
+  </nav>
+
+  <div class="row g-4">
+    <!-- Schedule Editor Form (If Admin or Doctor) -->
+    <div class="col-12 col-lg-5" *ngIf="canManage">
+      <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
+        <h5 class="fw-bold text-dark mb-1">
+          <i class="bi" [ngClass]="editingSlotId ? 'bi-pencil-square text-primary' : 'bi-plus-circle text-success'"></i>
+          {{ editingSlotId ? 'Edit Consultation Slot' : 'Add Consultation Slot' }}
+        </h5>
+        <p class="text-muted small mb-4">Set operating day and active hours for Dr. {{ doctor?.name }}</p>
+
+        <form [formGroup]="slotForm" (ngSubmit)="onSubmit()">
+          <!-- Day of week -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-secondary small">Day of the Week *</label>
+            <select class="form-select" formControlName="dayOfWeek">
+              <option *ngFor="let day of daysOfWeek" [value]="day">{{ day }}</option>
+            </select>
+          </div>
+
+          <!-- Time Window -->
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-semibold text-secondary small">Start Time *</label>
+              <input type="time" class="form-control" formControlName="startTime">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold text-secondary small">End Time *</label>
+              <input type="time" class="form-control" formControlName="endTime">
+            </div>
+          </div>
+
+          <!-- Active checkbox -->
+          <div class="form-check form-switch mb-4">
+            <input class="form-check-input" type="checkbox" role="switch" id="availableSwitch" formControlName="available">
+            <label class="form-check-label fw-semibold small" for="availableSwitch">Available for booking</label>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button *ngIf="editingSlotId" type="button" class="btn btn-light rounded-pill flex-grow-1" (click)="cancelEdit()">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-success text-white rounded-pill flex-grow-1 fw-semibold shadow-sm" [disabled]="isSaving">
+              <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+              <i *ngIf="!isSaving" class="bi" [ngClass]="editingSlotId ? 'bi-check2' : 'bi-plus-lg'"></i>
+              {{ editingSlotId ? 'Update Slot' : 'Add Slot' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Availability Slots Table -->
+    <div class="col-12" [ngClass]="canManage ? 'col-lg-7' : 'col-lg-12'">
+      <div class="card border-0 rounded-4 shadow-sm overflow-hidden bg-white">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="fw-bold text-dark mb-0">Active Consultation Slots</h5>
+            <small class="text-muted">Dr. {{ doctor?.name }} ({{ doctor?.specialization }})</small>
+          </div>
+          <span class="badge bg-primary-subtle text-primary">{{ availabilities.length }} Slots</span>
+        </div>
+
+        <div class="alert alert-success m-3 mb-0" *ngIf="successMessage">
+          <i class="bi bi-check-circle me-1"></i> {{ successMessage }}
+        </div>
+        <div class="alert alert-danger m-3 mb-0" *ngIf="errorMessage">
+          <i class="bi bi-exclamation-triangle me-1"></i> {{ errorMessage }}
+        </div>
+
+        <div *ngIf="isLoading" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status"></div>
+        </div>
+
+        <div class="table-responsive" *ngIf="!isLoading && availabilities.length > 0">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-4">Day</th>
+                <th>Hours</th>
+                <th>Status</th>
+                <th class="text-end pe-4" *ngIf="canManage">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let slot of availabilities">
+                <td class="ps-4 fw-bold text-dark">{{ slot.dayOfWeek }}</td>
+                <td><i class="bi bi-clock text-muted me-1"></i>{{ slot.startTime }} - {{ slot.endTime }}</td>
+                <td>
+                  <button type="button" class="btn btn-sm rounded-pill px-3"
+                          [ngClass]="slot.available ? 'btn-outline-success' : 'btn-outline-secondary'"
+                          (click)="toggleStatus(slot)"
+                          [disabled]="!canManage"
+                          title="Click to toggle availability">
+                    <i class="bi" [ngClass]="slot.available ? 'bi-check-circle-fill me-1' : 'bi-x-circle me-1'"></i>
+                    {{ slot.available ? 'Available' : 'Unavailable' }}
+                  </button>
+                </td>
+                <td class="text-end pe-4" *ngIf="canManage">
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" (click)="startEdit(slot)" title="Edit Time">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-outline-danger" (click)="deleteSlot(slot.availabilityId!)" title="Delete Slot">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="!isLoading && availabilities.length === 0" class="text-center py-5 text-muted">
+          <i class="bi bi-calendar-x fs-1 d-block mb-2 text-secondary-subtle"></i>
+          <p class="fw-semibold mb-1">No availability slots set</p>
+          <small>Add days and operational hours to accept patient appointments.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

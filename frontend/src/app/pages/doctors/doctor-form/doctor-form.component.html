@@ -1,0 +1,146 @@
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+      <!-- Breadcrumb -->
+      <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a routerLink="/doctors" class="text-decoration-none">Doctors</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{ isEditMode ? 'Edit Doctor' : 'Add Doctor' }}</li>
+        </ol>
+      </nav>
+
+      <div class="card border-0 rounded-4 shadow-sm overflow-hidden">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+          <div>
+            <h4 class="fw-bold mb-0 text-dark">
+              <i class="bi" [ngClass]="isEditMode ? 'bi-pencil-square text-primary' : 'bi-person-plus-fill text-primary'"></i>
+              {{ isEditMode ? 'Update Doctor Profile' : 'Add Medical Specialist' }}
+            </h4>
+            <small class="text-muted">Physician credentials, fees, and clinic details</small>
+          </div>
+          <a routerLink="/doctors" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-arrow-left me-1"></i> Back
+          </a>
+        </div>
+
+        <div class="card-body p-4 p-md-5">
+          <!-- Notification Alerts -->
+          <div class="alert alert-success d-flex align-items-center mb-4" *ngIf="successMessage">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div>{{ successMessage }}</div>
+          </div>
+          <div class="alert alert-danger d-flex align-items-center mb-4" *ngIf="errorMessage">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div>{{ errorMessage }}</div>
+          </div>
+
+          <div *ngIf="isLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <div class="text-muted mt-2">Loading doctor profile...</div>
+          </div>
+
+          <form [formGroup]="doctorForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading">
+            <!-- Doctor Name -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold text-secondary small">Doctor Full Name (e.g. Emily Watson) *</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="bi bi-person text-muted"></i></span>
+                <input type="text" class="form-control" formControlName="name" placeholder="First and Last Name"
+                       [class.is-invalid]="doctorForm.get('name')?.touched && doctorForm.get('name')?.invalid">
+              </div>
+              <div class="text-danger small mt-1" *ngIf="doctorForm.get('name')?.touched && doctorForm.get('name')?.invalid">
+                Doctor name is required.
+              </div>
+            </div>
+
+            <!-- Email and Phone -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary small">Email Address *</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light"><i class="bi bi-envelope text-muted"></i></span>
+                  <input type="email" class="form-control" formControlName="email" placeholder="dr.watson@hospital.com"
+                         [class.is-invalid]="doctorForm.get('email')?.touched && doctorForm.get('email')?.invalid">
+                </div>
+                <div class="text-danger small mt-1" *ngIf="doctorForm.get('email')?.touched && doctorForm.get('email')?.invalid">
+                  Valid email is required.
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary small">Phone Number *</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light"><i class="bi bi-telephone text-muted"></i></span>
+                  <input type="text" class="form-control" formControlName="phone" placeholder="+1-555-0199"
+                         [class.is-invalid]="doctorForm.get('phone')?.touched && doctorForm.get('phone')?.invalid">
+                </div>
+                <div class="text-danger small mt-1" *ngIf="doctorForm.get('phone')?.touched && doctorForm.get('phone')?.invalid">
+                  Valid phone number is required.
+                </div>
+              </div>
+            </div>
+
+            <!-- Specialization & Qualification -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary small">Medical Specialization *</label>
+                <select class="form-select" formControlName="specialization">
+                  <option *ngFor="let spec of specializationOptions" [value]="spec">{{ spec }}</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary small">Academic Qualifications</label>
+                <input type="text" class="form-control" formControlName="qualification" placeholder="e.g. MBBS, MD, FRCS">
+              </div>
+            </div>
+
+            <!-- Experience & Consultation Fee & Status -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold text-secondary small">Experience (Years) *</label>
+                <input type="number" class="form-control" formControlName="experience" min="0">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold text-secondary small">Consultation Fee ($) *</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light"><i class="bi bi-currency-dollar"></i></span>
+                  <input type="number" class="form-control" formControlName="consultationFee" min="0" step="10">
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold text-secondary small">Availability Status *</label>
+                <select class="form-select" formControlName="status">
+                  <option value="AVAILABLE">Available</option>
+                  <option value="ON_LEAVE">On Leave</option>
+                  <option value="BUSY">Busy</option>
+                  <option value="INACTIVE">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Department & Room -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary small">Department</label>
+                <input type="text" class="form-control" formControlName="department" placeholder="e.g. Cardiology OPD">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary small">Consultation Room / Cabin</label>
+                <input type="text" class="form-control" formControlName="roomNumber" placeholder="e.g. Room 302, 3rd Floor">
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 border-top pt-4">
+              <a routerLink="/doctors" class="btn btn-light px-4 rounded-pill">Cancel</a>
+              <button type="submit" class="btn btn-primary px-5 rounded-pill fw-semibold shadow-sm" [disabled]="isSaving">
+                <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+                <i *ngIf="!isSaving" class="bi" [ngClass]="isEditMode ? 'bi-check-lg' : 'bi-plus-lg'"></i>
+                {{ isEditMode ? 'Update Doctor' : 'Save Doctor Profile' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,400 @@
+<div class="container-fluid py-4">
+  <!-- Top Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h2 class="h3 fw-bold mb-1">
+        <i class="bi bi-calendar2-check-fill text-primary me-2"></i>Appointments Management
+      </h2>
+      <p class="text-muted mb-0">Track, schedule, confirm, and manage hospital appointments</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a *ngIf="canBook" routerLink="/appointments/book" class="btn tab-btn-book btn-sm d-inline-flex align-items-center gap-1">
+        <i class="bi bi-plus-circle me-1"></i>Book New Appointment
+      </a>
+    </div>
+  </div>
+
+  <!-- Dual Appointment Sub-navigation with Individual Colors -->
+  <div class="card border-0 shadow-sm rounded-4 p-2 mb-4 bg-white" *ngIf="isPatient || canBook">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <a routerLink="/appointments" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="active-tab-appointments"
+         class="btn tab-btn-appointments flex-grow-1 flex-sm-grow-0 d-inline-flex align-items-center justify-content-center">
+        <i class="bi bi-calendar2-check-fill me-2"></i>
+        <span>My Appointments</span>
+        <span class="badge rounded-pill ms-2 tab-badge" *ngIf="appointments.length">{{ appointments.length }}</span>
+      </a>
+      <a routerLink="/appointments/book" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="active-tab-book"
+         class="btn tab-btn-book flex-grow-1 flex-sm-grow-0 d-inline-flex align-items-center justify-content-center" *ngIf="canBook">
+        <i class="bi bi-calendar-plus-fill me-2"></i>
+        <span>Book Appointment</span>
+        <span class="badge rounded-pill ms-2 tab-badge">+ New</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i>{{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = null"></button>
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+  </div>
+
+  <!-- Active Filter Notification Bar -->
+  <div *ngIf="isAnyFilterActive" class="d-flex align-items-center justify-content-between p-2 px-3 mb-3 bg-primary-subtle border border-primary-subtle rounded-4 text-primary">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <i class="bi bi-funnel-fill fs-5"></i>
+      <span class="small fw-semibold">Active Filter: <strong>{{ activeFilterTitle }}</strong></span>
+      <span class="badge bg-primary rounded-pill">{{ appointments.length }} Found</span>
+    </div>
+  </div>
+
+  <!-- Timeline & Mode Filter Pills -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body p-3">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="text-muted fw-semibold me-2"><i class="bi bi-calendar3 me-1"></i>Schedule:</span>
+        <button class="btn btn-sm rounded-pill px-3" [ngClass]="timeFilter === 'all' && !selectedDate ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary'" (click)="setTimeFilter('all')">
+          <i class="bi bi-collection me-1"></i>All Time
+        </button>
+        <button class="btn btn-sm rounded-pill px-3" [ngClass]="timeFilter === 'today' ? 'btn-danger text-white shadow-sm' : 'btn-outline-danger'" (click)="setTimeFilter('today')">
+          <i class="bi bi-clock-history me-1"></i>Today's Consultations
+        </button>
+        <button class="btn btn-sm rounded-pill px-3" [ngClass]="timeFilter === 'upcoming' ? 'btn-info text-dark shadow-sm fw-semibold' : 'btn-outline-info text-dark'" (click)="setTimeFilter('upcoming')">
+          <i class="bi bi-calendar-check me-1"></i>Upcoming
+        </button>
+        <button class="btn btn-sm rounded-pill px-3" [ngClass]="timeFilter === 'history' ? 'btn-success text-white shadow-sm' : 'btn-outline-success'" (click)="setTimeFilter('history')">
+          <i class="bi bi-clock-history me-1"></i>Appointment History
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Filter Pills -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body p-3">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="text-muted fw-semibold me-2"><i class="bi bi-funnel me-1"></i>Status:</span>
+        <button class="btn btn-sm" [ngClass]="selectedStatus === '' ? 'btn-dark' : 'btn-outline-secondary'" (click)="setStatusFilter('')">
+          All
+        </button>
+        <button class="btn btn-sm" [ngClass]="selectedStatus === 'BOOKED' ? 'btn-warning text-dark' : 'btn-outline-warning text-dark'" (click)="setStatusFilter('BOOKED')">
+          <i class="bi bi-clock me-1"></i>Booked
+        </button>
+        <button class="btn btn-sm" [ngClass]="selectedStatus === 'CONFIRMED' ? 'btn-primary' : 'btn-outline-primary'" (click)="setStatusFilter('CONFIRMED')">
+          <i class="bi bi-check2-circle me-1"></i>Confirmed
+        </button>
+        <button class="btn btn-sm" [ngClass]="selectedStatus === 'COMPLETED' ? 'btn-success' : 'btn-outline-success'" (click)="setStatusFilter('COMPLETED')">
+          <i class="bi bi-check-all me-1"></i>Completed
+        </button>
+        <button class="btn btn-sm" [ngClass]="selectedStatus === 'RESCHEDULED' ? 'btn-info text-dark' : 'btn-outline-info text-dark'" (click)="setStatusFilter('RESCHEDULED')">
+          <i class="bi bi-arrow-repeat me-1"></i>Rescheduled
+        </button>
+        <button class="btn btn-sm" [ngClass]="selectedStatus === 'CANCELLED' ? 'btn-danger' : 'btn-outline-danger'" (click)="setStatusFilter('CANCELLED')">
+          <i class="bi bi-x-circle me-1"></i>Cancelled
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div class="card border-0 shadow-sm mb-4 rounded-4 p-3">
+    <div class="card-body p-2">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-3">
+          <label class="form-label small fw-bold text-secondary mb-1">
+            <i class="bi bi-search me-1"></i>Search Keyword
+          </label>
+          <input type="text" class="form-control rounded-3" placeholder="Keyword..."
+                 [(ngModel)]="searchTerm" (keyup.enter)="loadAppointments()">
+        </div>
+        <div class="col-6 col-md-2" *ngIf="!isPatient">
+          <label class="form-label small fw-bold text-secondary mb-1">
+            <i class="bi bi-person me-1"></i>Patient
+          </label>
+          <select class="form-select rounded-3" [(ngModel)]="selectedPatientId" (change)="loadAppointments()">
+            <option value="">All Patients</option>
+            <option *ngFor="let p of patients" [value]="p.id">
+              {{ p.name }}
+            </option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2" *ngIf="!isDoctor">
+          <label class="form-label small fw-bold text-secondary mb-1">
+            <i class="bi bi-award me-1"></i>Doctor
+          </label>
+          <select class="form-select rounded-3" [(ngModel)]="selectedDoctorId" (change)="loadAppointments()">
+            <option value="">All Doctors</option>
+            <option *ngFor="let doc of doctors" [value]="doc.doctorId">
+              Dr. {{ doc.name }}
+            </option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small fw-bold text-secondary mb-1">
+            <i class="bi bi-calendar3 me-1"></i>Date
+          </label>
+          <input type="date" class="form-control rounded-3" [(ngModel)]="selectedDate" (change)="loadAppointments()">
+        </div>
+        <div class="col-6 col-md-3 d-flex gap-2">
+          <button class="btn btn-primary rounded-3 flex-fill fw-semibold" (click)="loadAppointments()">
+            <i class="bi bi-funnel-fill me-1"></i> Filter
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Appointments Table Card -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+      <h5 class="mb-0 fw-bold">
+        Appointments List
+        <span class="badge bg-light text-dark border ms-2">{{ appointments.length }} Total</span>
+      </h5>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3" style="width: 70px;">#ID</th>
+            <th>Patient</th>
+            <th>Doctor</th>
+            <th>Date & Time</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Loading State -->
+          <tr *ngIf="isLoading">
+            <td colspan="7" class="text-center py-5">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <p class="text-muted mt-2 mb-0">Fetching appointments...</p>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="!isLoading && appointments.length === 0">
+            <td colspan="7" class="text-center py-5">
+              <div class="text-muted mb-3">
+                <i class="bi" [ngClass]="timeFilter === 'history' ? 'bi-clock-history' : 'bi-calendar-x'" class="display-4 text-secondary"></i>
+              </div>
+              <h6 class="fw-bold" *ngIf="timeFilter === 'history'">No past appointment history found</h6>
+              <h6 class="fw-bold" *ngIf="timeFilter !== 'history'">No appointments found</h6>
+              <p class="text-muted small mb-3" *ngIf="timeFilter === 'history'">You have no past, completed, or cancelled consultations recorded yet.</p>
+              <p class="text-muted small mb-3" *ngIf="timeFilter !== 'history'">Try adjusting your filters or book a new appointment.</p>
+              <a *ngIf="canBook" routerLink="/appointments/book" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus me-1"></i>Book New Appointment
+              </a>
+            </td>
+          </tr>
+
+          <!-- Data Rows -->
+          <tr *ngFor="let app of appointments">
+            <td class="ps-3 fw-bold text-muted">#{{ app.id }}</td>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="avatar-circle bg-primary-subtle text-primary fw-bold me-2">
+                  {{ (app.patientName || 'P').charAt(0).toUpperCase() }}
+                </div>
+                <div>
+                  <div class="fw-semibold text-dark">{{ app.patientName || 'N/A' }}</div>
+                  <small class="text-muted">{{ app.patientPhone || app.patientEmail || '' }}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="fw-semibold">{{ app.doctorName }}</div>
+              <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                {{ app.doctorSpecialization }}
+              </span>
+            </td>
+            <td>
+              <div class="fw-semibold"><i class="bi bi-calendar3 me-1 text-primary"></i>{{ app.appointmentDate }}</div>
+              <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ app.formattedTime || app.appointmentTime }}</small>
+            </td>
+            <td>
+              <div class="text-truncate" style="max-width: 220px;" [title]="app.reason">
+                {{ app.reason }}
+              </div>
+              <small *ngIf="app.notes" class="text-muted d-block text-truncate" style="max-width: 220px;" [title]="app.notes">
+                <i class="bi bi-sticky me-1"></i>{{ app.notes }}
+              </small>
+            </td>
+            <td>
+              <span class="badge px-3 py-2 rounded-pill" [ngClass]="getStatusBadgeClass(app.status)">
+                {{ app.status }}
+              </span>
+            </td>
+            <td class="text-end pe-3">
+              <div class="btn-group btn-group-sm">
+                <!-- View Details -->
+                <a [routerLink]="['/appointments', app.id]" class="btn btn-outline-secondary" title="View Details">
+                  <i class="bi bi-eye"></i>
+                </a>
+
+                <!-- Confirm Action -->
+                <button *ngIf="canConfirm && (app.status === 'BOOKED' || app.status === 'RESCHEDULED')"
+                        class="btn btn-outline-primary"
+                        (click)="onConfirm(app)"
+                        title="Confirm Appointment">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+
+                <!-- Complete Action -->
+                <button *ngIf="canComplete && (app.status === 'CONFIRMED' || app.status === 'RESCHEDULED')"
+                        class="btn btn-outline-success"
+                        (click)="onComplete(app)"
+                        title="Mark Completed">
+                  <i class="bi bi-check2-all"></i>
+                </button>
+
+                <!-- Reschedule Action -->
+                <button *ngIf="app.status !== 'COMPLETED' && app.status !== 'CANCELLED'"
+                        class="btn btn-outline-warning text-dark"
+                        (click)="openRescheduleModal(app)"
+                        title="Reschedule">
+                  <i class="bi bi-calendar-event"></i>
+                </button>
+
+                <!-- Cancel Action -->
+                <button *ngIf="app.status !== 'COMPLETED' && app.status !== 'CANCELLED'"
+                        class="btn btn-outline-danger"
+                        (click)="openCancelModal(app)"
+                        title="Cancel Appointment">
+                  <i class="bi bi-x-circle"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CANCEL MODAL ================= -->
+<div *ngIf="cancelTarget" class="modal-backdrop fade show"></div>
+<div *ngIf="cancelTarget" class="modal fade show d-block" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Cancel Appointment</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeCancelModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p>Are you sure you want to cancel appointment <strong>#{{ cancelTarget.id }}</strong> for <strong>{{ cancelTarget.patientName }}</strong> with <strong>{{ cancelTarget.doctorName }}</strong> on <strong>{{ cancelTarget.appointmentDate }}</strong> at <strong>{{ cancelTarget.formattedTime || cancelTarget.appointmentTime }}</strong>?</p>
+        <p class="small text-muted mb-3"><i class="bi bi-info-circle me-1"></i>The doctor's time slot will immediately be made available for other bookings.</p>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Cancellation Reason (Optional)</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="cancelReason" placeholder="Please provide reason for cancellation..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" (click)="closeCancelModal()">Keep Appointment</button>
+        <button type="button" class="btn btn-danger" [disabled]="isCancelling" (click)="confirmCancel()">
+          <span *ngIf="isCancelling" class="spinner-border spinner-border-sm me-1"></span>
+          Confirm Cancellation
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= RESCHEDULE MODAL ================= -->
+<div *ngIf="rescheduleTarget" class="modal-backdrop fade show"></div>
+<div *ngIf="rescheduleTarget" class="modal fade show d-block" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title"><i class="bi bi-arrow-repeat me-2"></i>Reschedule Appointment #{{ rescheduleTarget.id }}</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeRescheduleModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="alert alert-light border mb-4">
+          <div class="row">
+            <div class="col-sm-6">
+              <strong>Patient:</strong> {{ rescheduleTarget.patientName }}
+            </div>
+            <div class="col-sm-6">
+              <strong>Doctor:</strong> {{ rescheduleTarget.doctorName }} ({{ rescheduleTarget.doctorSpecialization }})
+            </div>
+            <div class="col-12 mt-2">
+              <span class="text-muted">Current Schedule:</span>
+              <span class="badge bg-secondary ms-1">{{ rescheduleTarget.appointmentDate }} at {{ rescheduleTarget.formattedTime || rescheduleTarget.appointmentTime }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Select New Date <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" [(ngModel)]="rescheduleDate" (change)="onRescheduleDateChange()">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Selected Time Slot</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-clock"></i></span>
+              <input type="text" class="form-control" [value]="rescheduleTime ? rescheduleTime : 'No slot selected'" readonly>
+            </div>
+          </div>
+        </div>
+
+        <!-- Available Slots Selection Grid -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Available Time Slots for Selected Date</label>
+          <div *ngIf="isLoadingSlots" class="text-center py-3">
+            <div class="spinner-border spinner-border-sm text-primary"></div>
+            <span class="text-muted ms-2 small">Loading available slots...</span>
+          </div>
+
+          <div *ngIf="!isLoadingSlots && rescheduleDate && availableSlots.length === 0" class="alert alert-warning small py-2">
+            <i class="bi bi-exclamation-triangle me-1"></i>No working slots available for this doctor on the selected date. Please pick a working weekday.
+          </div>
+
+          <div *ngIf="!isLoadingSlots && availableSlots.length > 0" class="slot-grid">
+            <button *ngFor="let slot of availableSlots"
+                    type="button"
+                    class="btn btn-sm slot-btn"
+                    [ngClass]="{
+                      'btn-primary': rescheduleTime === slot.time,
+                      'btn-outline-success': slot.available && rescheduleTime !== slot.time,
+                      'btn-light text-muted border-0 opacity-50': slot.booked
+                    }"
+                    [disabled]="slot.booked"
+                    (click)="selectSlot(slot)">
+              <i class="bi" [ngClass]="slot.booked ? 'bi-lock-fill' : 'bi-clock'"></i>
+              {{ slot.formattedTime }}
+            </button>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Reason for Reschedule (Optional)</label>
+          <input type="text" class="form-control" [(ngModel)]="rescheduleReason" placeholder="e.g., Doctor delayed, patient request">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Additional Notes</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="rescheduleNotes" placeholder="Additional instructions or notes..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" (click)="closeRescheduleModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" [disabled]="isRescheduling || !rescheduleDate || !rescheduleTime" (click)="confirmReschedule()">
+          <span *ngIf="isRescheduling" class="spinner-border spinner-border-sm me-1"></span>
+          Confirm Reschedule
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

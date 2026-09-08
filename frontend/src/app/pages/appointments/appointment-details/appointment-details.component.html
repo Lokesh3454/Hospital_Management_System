@@ -1,0 +1,343 @@
+<div class="container-fluid py-4">
+  <!-- Loading state -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="text-muted mt-2">Loading appointment details...</p>
+  </div>
+
+  <div *ngIf="!isLoading && appointment">
+    <!-- Header Navigation & Action Bar -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-1 small">
+            <li class="breadcrumb-item"><a routerLink="/appointments">Appointments</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Appointment #{{ appointment.id }}</li>
+          </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3">
+          <h2 class="h3 fw-bold mb-0">Appointment #{{ appointment.id }}</h2>
+          <span class="badge px-3 py-2 rounded-pill fs-6" [ngClass]="getStatusBadgeClass(appointment.status)">
+            {{ appointment.status }}
+          </span>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-outline-secondary" (click)="printDetails()">
+          <i class="bi bi-printer me-1"></i>Print
+        </button>
+
+        <!-- Medical Record & Prescription Creation -->
+        <a *ngIf="isDoctorOrAdmin" [routerLink]="['/medical-records/new']"
+           [queryParams]="{ appointmentId: appointment.id, patientId: appointment.patientId, doctorId: appointment.doctorId }"
+           class="btn btn-outline-info" title="Record clinical diagnostic findings for this encounter">
+          <i class="bi bi-file-earmark-medical me-1"></i>Add Medical Record
+        </a>
+
+        <a [routerLink]="['/telemedicine', appointment.id]" class="btn btn-primary shadow-sm" title="Launch virtual video consultation room">
+          <i class="bi bi-camera-video-fill me-1"></i>Join Video Call
+        </a>
+
+        <a *ngIf="isDoctorOrAdmin" [routerLink]="['/prescriptions/new']"
+           [queryParams]="{ appointmentId: appointment.id, patientId: appointment.patientId, doctorId: appointment.doctorId }"
+           class="btn btn-outline-success" title="Prescribe medications for this encounter">
+          <i class="bi bi-prescription2 me-1"></i>Issue Prescription
+        </a>
+
+        <!-- Generate Bill (Phase 5) -->
+        <a *ngIf="canManageBilling" [routerLink]="['/bills/new']"
+           [queryParams]="{ appointmentId: appointment.id, patientId: appointment.patientId }"
+           class="btn btn-outline-success" title="Itemize charges and generate invoice">
+          <i class="bi bi-receipt-cutoff me-1"></i>Generate Bill
+        </a>
+
+        <!-- Confirm -->
+        <button *ngIf="canConfirm && (appointment.status === 'BOOKED' || appointment.status === 'RESCHEDULED')"
+                class="btn btn-primary" (click)="confirmAppointment()">
+          <i class="bi bi-check2-circle me-1"></i>Confirm Appointment
+        </button>
+
+        <!-- Complete -->
+        <button *ngIf="canComplete && (appointment.status === 'CONFIRMED' || appointment.status === 'RESCHEDULED')"
+                class="btn btn-success" (click)="completeAppointment()">
+          <i class="bi bi-check-all me-1"></i>Mark Completed
+        </button>
+
+        <!-- Reschedule -->
+        <button *ngIf="appointment.status !== 'COMPLETED' && appointment.status !== 'CANCELLED'"
+                class="btn btn-warning text-dark" (click)="openRescheduleModal()">
+          <i class="bi bi-calendar-event me-1"></i>Reschedule
+        </button>
+
+        <!-- Cancel -->
+        <button *ngIf="appointment.status !== 'COMPLETED' && appointment.status !== 'CANCELLED'"
+                class="btn btn-outline-danger" (click)="openCancelModal()">
+          <i class="bi bi-x-circle me-1"></i>Cancel
+        </button>
+
+        <a routerLink="/appointments" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+      <i class="bi bi-check-circle-fill me-2"></i>{{ successMessage }}
+      <button type="button" class="btn-close" (click)="successMessage = null"></button>
+    </div>
+    <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
+      <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+    </div>
+
+    <!-- Hero Date & Schedule Banner -->
+    <div class="card border-0 shadow-sm mb-4 bg-primary text-white">
+      <div class="card-body p-4">
+        <div class="row align-items-center">
+          <div class="col-md-6 mb-3 mb-md-0">
+            <div class="d-flex align-items-center">
+              <div class="display-5 me-3">
+                <i class="bi bi-calendar-check"></i>
+              </div>
+              <div>
+                <div class="text-white-50 text-uppercase small fw-semibold">Scheduled Date</div>
+                <h3 class="fw-bold mb-0 text-white">{{ appointment.appointmentDate }}</h3>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="d-flex align-items-center">
+              <div class="display-5 me-3">
+                <i class="bi bi-clock-history"></i>
+              </div>
+              <div>
+                <div class="text-white-50 text-uppercase small fw-semibold">Time Slot</div>
+                <h3 class="fw-bold mb-0 text-white">{{ appointment.formattedTime || appointment.appointmentTime }}</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Details Grid -->
+    <div class="row g-4">
+      <!-- Left Column: Patient & Doctor Cards -->
+      <div class="col-lg-6">
+        <!-- Patient Information Card -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-person text-primary me-2"></i>Patient Details</h5>
+            <a [routerLink]="['/patients', appointment.patientId]" class="btn btn-sm btn-outline-primary">
+              View Profile
+            </a>
+          </div>
+          <div class="card-body pt-0">
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item px-0 d-flex justify-content-between">
+                <span class="text-muted">Full Name</span>
+                <span class="fw-semibold text-dark">{{ appointment.patientName }}</span>
+              </li>
+              <li class="list-group-item px-0 d-flex justify-content-between" *ngIf="appointment.patientPhone">
+                <span class="text-muted">Phone Number</span>
+                <span class="fw-semibold">{{ appointment.patientPhone }}</span>
+              </li>
+              <li class="list-group-item px-0 d-flex justify-content-between" *ngIf="appointment.patientEmail">
+                <span class="text-muted">Email</span>
+                <span class="fw-semibold">{{ appointment.patientEmail }}</span>
+              </li>
+              <li class="list-group-item px-0 d-flex justify-content-between" *ngIf="appointment.patientGender">
+                <span class="text-muted">Gender</span>
+                <span class="badge bg-light text-dark border">{{ appointment.patientGender }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Doctor Information Card -->
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-heart-pulse text-danger me-2"></i>Attending Doctor</h5>
+            <a [routerLink]="['/doctors', appointment.doctorId]" class="btn btn-sm btn-outline-primary">
+              View Profile
+            </a>
+          </div>
+          <div class="card-body pt-0">
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item px-0 d-flex justify-content-between">
+                <span class="text-muted">Doctor Name</span>
+                <span class="fw-semibold text-dark">{{ appointment.doctorName }}</span>
+              </li>
+              <li class="list-group-item px-0 d-flex justify-content-between">
+                <span class="text-muted">Specialization</span>
+                <span class="badge bg-info-subtle text-info-emphasis border">{{ appointment.doctorSpecialization }}</span>
+              </li>
+              <li class="list-group-item px-0 d-flex justify-content-between" *ngIf="appointment.doctorDepartment">
+                <span class="text-muted">Department</span>
+                <span class="fw-semibold">{{ appointment.doctorDepartment }}</span>
+              </li>
+              <li class="list-group-item px-0 d-flex justify-content-between" *ngIf="appointment.doctorRoomNumber">
+                <span class="text-muted">Clinic Room</span>
+                <span class="badge bg-secondary-subtle text-secondary border">{{ appointment.doctorRoomNumber }}</span>
+              </li>
+              <li class="list-group-item px-0 d-flex justify-content-between">
+                <span class="text-muted">Consultation Fee</span>
+                <span class="fw-bold text-success fs-6">${{ appointment.doctorConsultationFee }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Consultation Reason & Clinical Notes -->
+      <div class="col-lg-6">
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-white py-3 border-0">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-card-text text-primary me-2"></i>Consultation Reason</h5>
+          </div>
+          <div class="card-body pt-0">
+            <p class="fs-6 text-dark mb-0 p-3 bg-light rounded-3 border">
+              {{ appointment.reason }}
+            </p>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-white py-3 border-0">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-journal-medical text-primary me-2"></i>Clinical Notes & History</h5>
+          </div>
+          <div class="card-body pt-0">
+            <div *ngIf="appointment.notes" class="p-3 bg-light rounded-3 border">
+              <pre class="mb-0 text-muted" style="white-space: pre-wrap; font-family: inherit;">{{ appointment.notes }}</pre>
+            </div>
+            <div *ngIf="!appointment.notes" class="text-muted small py-3 text-center">
+              No additional notes recorded for this appointment.
+            </div>
+          </div>
+        </div>
+
+        <!-- Timestamps & Metadata Card -->
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-3">
+            <div class="row text-center small text-muted">
+              <div class="col-6 border-end">
+                <span>Created At:</span>
+                <div class="fw-semibold text-dark">{{ appointment.createdAt ? (appointment.createdAt | date:'medium') : 'N/A' }}</div>
+              </div>
+              <div class="col-6">
+                <span>Last Updated:</span>
+                <div class="fw-semibold text-dark">{{ appointment.updatedAt ? (appointment.updatedAt | date:'medium') : 'N/A' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CANCEL MODAL ================= -->
+<div *ngIf="showCancelModal" class="modal-backdrop fade show"></div>
+<div *ngIf="showCancelModal" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Cancel Appointment #{{ appointment?.id }}</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeCancelModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p>Are you sure you want to cancel this appointment? The doctor's slot will be freed up immediately.</p>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Cancellation Reason (Optional)</label>
+          <textarea class="form-control" rows="3" [(ngModel)]="cancelReason" placeholder="State reason for cancellation..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" (click)="closeCancelModal()">Keep</button>
+        <button type="button" class="btn btn-danger" [disabled]="isCancelling" (click)="confirmCancel()">
+          <span *ngIf="isCancelling" class="spinner-border spinner-border-sm me-1"></span>
+          Confirm Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= RESCHEDULE MODAL ================= -->
+<div *ngIf="showRescheduleModal" class="modal-backdrop fade show"></div>
+<div *ngIf="showRescheduleModal" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title"><i class="bi bi-arrow-repeat me-2"></i>Reschedule Appointment #{{ appointment?.id }}</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeRescheduleModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Select New Date <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" [(ngModel)]="rescheduleDate" (change)="onRescheduleDateChange()">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Selected New Time Slot</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-clock"></i></span>
+              <input type="text" class="form-control" [value]="rescheduleTime ? rescheduleTime : 'No slot chosen'" readonly>
+            </div>
+          </div>
+        </div>
+
+        <!-- Available Slots Selection Grid -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Available Time Slots for Selected Date</label>
+          <div *ngIf="isLoadingSlots" class="text-center py-3">
+            <div class="spinner-border spinner-border-sm text-primary"></div>
+            <span class="text-muted ms-2 small">Loading available slots...</span>
+          </div>
+
+          <div *ngIf="!isLoadingSlots && rescheduleDate && availableSlots.length === 0" class="alert alert-warning small py-2">
+            <i class="bi bi-exclamation-triangle me-1"></i>No working slots available for this doctor on this date.
+          </div>
+
+          <div *ngIf="!isLoadingSlots && availableSlots.length > 0" class="slot-grid">
+            <button *ngFor="let slot of availableSlots"
+                    type="button"
+                    class="btn btn-sm slot-btn"
+                    [ngClass]="{
+                      'btn-primary': rescheduleTime === slot.time,
+                      'btn-outline-success': slot.available && rescheduleTime !== slot.time,
+                      'btn-light text-muted border-0 opacity-50': slot.booked
+                    }"
+                    [disabled]="slot.booked"
+                    (click)="selectSlot(slot)">
+              <i class="bi" [ngClass]="slot.booked ? 'bi-lock-fill' : 'bi-clock'"></i>
+              {{ slot.formattedTime }}
+            </button>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Reason for Rescheduling</label>
+          <input type="text" class="form-control" [(ngModel)]="rescheduleReason" placeholder="e.g. Schedule adjustment">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Notes</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="rescheduleNotes" placeholder="Additional notes..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" (click)="closeRescheduleModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" [disabled]="isRescheduling || !rescheduleDate || !rescheduleTime" (click)="confirmReschedule()">
+          <span *ngIf="isRescheduling" class="spinner-border spinner-border-sm me-1"></span>
+          Confirm Reschedule
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

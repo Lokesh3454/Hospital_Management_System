@@ -1,0 +1,288 @@
+<div class="container-fluid py-4 px-md-4">
+  <!-- Welcome Banner -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 rounded-4 shadow-sm bg-gradient-doctor text-white p-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+          <div>
+            <span class="badge bg-white text-primary fw-bold mb-2">Physician Consultation Portal</span>
+            <h2 class="fw-bold mb-1">Dr. {{ authService.currentUserValue?.firstName }} {{ authService.currentUserValue?.lastName }}</h2>
+            <p class="text-white-50 mb-0">Clinical encounters, patient schedules, electronic health records, and prescription issuance.</p>
+          </div>
+          <div>
+            <a routerLink="/prescriptions/new" class="btn btn-light fw-semibold text-primary px-4 py-2 rounded-pill shadow-sm">
+              <i class="bi bi-plus-circle me-1"></i> Issue Prescription
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading && !dashboard" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="text-muted small mt-2">Loading clinical stats...</p>
+  </div>
+
+  <!-- Live Key Metrics Row -->
+  <div *ngIf="dashboard" class="row g-3 mb-4">
+    <!-- Today's Appointments -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a [routerLink]="['/appointments']" [queryParams]="{ filter: 'today' }" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Today's Appointments</div>
+            <h3 class="fw-bold mb-0 text-primary">{{ dashboard.todayAppointments }}</h3>
+            <small class="text-primary"><i class="bi bi-clock"></i> Consultations today</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> Today's Schedule</div>
+          </div>
+          <div class="stat-icon bg-primary-subtle text-primary">
+            <i class="bi bi-calendar-check fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Upcoming Appointments -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a [routerLink]="['/appointments']" [queryParams]="{ filter: 'upcoming', doctorId: authService.currentUserValue?.profileId }" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Upcoming Appointments</div>
+            <h3 class="fw-bold mb-0 text-info">{{ dashboard.upcomingAppointments }}</h3>
+            <small class="text-info"><i class="bi bi-calendar-week"></i> Scheduled ahead</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> Upcoming Schedule</div>
+          </div>
+          <div class="stat-icon bg-info-subtle text-info">
+            <i class="bi bi-calendar-event fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Total Patients Treated -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a [routerLink]="['/patients']" [queryParams]="{ doctorId: authService.currentUserValue?.profileId }" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Total Patients</div>
+            <h3 class="fw-bold mb-0 text-success">{{ dashboard.totalPatients }}</h3>
+            <small class="text-success"><i class="bi bi-person-check"></i> In your care</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> Patient Records</div>
+          </div>
+          <div class="stat-icon bg-success-subtle text-success">
+            <i class="bi bi-people fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Recent Medical Records -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a [routerLink]="['/medical-records']" [queryParams]="{ doctorId: authService.currentUserValue?.profileId }" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Medical Records</div>
+            <h3 class="fw-bold mb-0 text-dark">{{ dashboard.recentMedicalRecords }}</h3>
+            <small class="text-muted"><i class="bi bi-file-medical"></i> Diagnostic entries</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> My Medical Records</div>
+          </div>
+          <div class="stat-icon bg-secondary-subtle text-secondary">
+            <i class="bi bi-clipboard2-pulse fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Prescriptions Issued -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a [routerLink]="['/prescriptions']" [queryParams]="{ doctorId: authService.currentUserValue?.profileId }" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Prescriptions</div>
+            <h3 class="fw-bold mb-0 text-danger">{{ dashboard.prescriptions }}</h3>
+            <small class="text-danger"><i class="bi bi-prescription2"></i> Formularies issued</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> My Prescriptions</div>
+          </div>
+          <div class="stat-icon bg-danger-subtle text-danger">
+            <i class="bi bi-capsule fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Real-time Clinical Panels -->
+  <div *ngIf="dashboard" class="row g-4">
+    <!-- Appointments Queue -->
+    <div class="col-12 col-lg-7">
+      <div class="card border-0 rounded-4 shadow-sm p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div class="btn-group btn-group-sm rounded-pill p-1 bg-light border">
+            <button type="button" class="btn rounded-pill px-3 fw-semibold" 
+                    [ngClass]="activeQueueTab === 'today' ? 'btn-primary shadow-sm' : 'btn-light text-secondary'"
+                    (click)="setQueueTab('today')">
+              <i class="bi bi-calendar2-day me-1"></i>Today ({{ dashboard.todayAppointments }})
+            </button>
+            <button type="button" class="btn rounded-pill px-3 fw-semibold" 
+                    [ngClass]="activeQueueTab === 'upcoming' ? 'btn-info text-white shadow-sm' : 'btn-light text-secondary'"
+                    (click)="setQueueTab('upcoming')">
+              <i class="bi bi-calendar-week me-1"></i>Upcoming ({{ dashboard.upcomingAppointments }})
+            </button>
+          </div>
+          <a [routerLink]="['/appointments']" 
+             [queryParams]="{ filter: activeQueueTab, doctorId: authService.currentUserValue?.profileId }" 
+             class="btn btn-outline-primary btn-sm rounded-pill px-3">
+            {{ activeQueueTab === 'today' ? "Today's Schedule" : "All Upcoming Visits" }}
+          </a>
+        </div>
+
+        <!-- Table View -->
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>{{ activeQueueTab === 'today' ? 'Time' : 'Date & Time' }}</th>
+                <th>Patient</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Today's Queue Tab -->
+              <ng-container *ngIf="activeQueueTab === 'today'">
+                <tr *ngIf="dashboard.todayAppointmentsList.length === 0">
+                  <td colspan="5" class="text-center py-4 text-muted small">
+                    <i class="bi bi-emoji-smile d-block fs-3 mb-1 text-secondary"></i>
+                    No consultations scheduled for today.
+                  </td>
+                </tr>
+                <tr *ngFor="let appt of dashboard.todayAppointmentsList">
+                  <td class="fw-bold text-dark">{{ appt.formattedTime || appt.appointmentTime }}</td>
+                  <td>
+                    <div class="fw-semibold text-dark">{{ appt.patientName }}</div>
+                    <small class="text-muted">{{ appt.patientPhone }}</small>
+                  </td>
+                  <td class="small text-muted text-truncate" style="max-width: 180px;">{{ appt.reason || 'General Checkup' }}</td>
+                  <td>
+                    <span class="badge rounded-pill px-2 py-1"
+                          [ngClass]="{
+                            'bg-success-subtle text-success': appt.status === 'CONFIRMED',
+                            'bg-warning-subtle text-warning': appt.status === 'BOOKED',
+                            'bg-info-subtle text-info': appt.status === 'COMPLETED'
+                          }">
+                      {{ appt.status }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <div class="btn-group">
+                      <a [routerLink]="['/appointments', appt.id]" class="btn btn-sm btn-outline-primary rounded-pill me-1" title="Examine">
+                        <i class="bi bi-eye"></i>
+                      </a>
+                      <a [routerLink]="['/prescriptions/new']" [queryParams]="{ appointmentId: appt.id, patientId: appt.patientId }" class="btn btn-sm btn-outline-danger rounded-pill me-1" title="Prescribe">
+                        <i class="bi bi-capsule"></i>
+                      </a>
+                      <a [routerLink]="['/medical-records/new']" [queryParams]="{ appointmentId: appt.id, patientId: appt.patientId }" class="btn btn-sm btn-outline-info rounded-pill" title="Add Record">
+                        <i class="bi bi-journal-plus"></i>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              </ng-container>
+
+              <!-- Upcoming Queue Tab -->
+              <ng-container *ngIf="activeQueueTab === 'upcoming'">
+                <tr *ngIf="dashboard.upcomingAppointmentsList.length === 0">
+                  <td colspan="5" class="text-center py-4 text-muted small">
+                    <i class="bi bi-calendar-x d-block fs-3 mb-1 text-secondary"></i>
+                    No upcoming consultations scheduled ahead.
+                  </td>
+                </tr>
+                <tr *ngFor="let appt of dashboard.upcomingAppointmentsList">
+                  <td>
+                    <div class="fw-bold text-primary">{{ appt.appointmentDate }}</div>
+                    <small class="text-muted">{{ appt.formattedTime || appt.appointmentTime }}</small>
+                  </td>
+                  <td>
+                    <div class="fw-semibold text-dark">{{ appt.patientName }}</div>
+                    <small class="text-muted">{{ appt.patientPhone }}</small>
+                  </td>
+                  <td class="small text-muted text-truncate" style="max-width: 180px;">{{ appt.reason || 'Specialist Consultation' }}</td>
+                  <td>
+                    <span class="badge rounded-pill px-2 py-1"
+                          [ngClass]="{
+                            'bg-success-subtle text-success': appt.status === 'CONFIRMED',
+                            'bg-warning-subtle text-warning': appt.status === 'BOOKED',
+                            'bg-info-subtle text-info': appt.status === 'COMPLETED'
+                          }">
+                      {{ appt.status }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <div class="btn-group">
+                      <a [routerLink]="['/appointments', appt.id]" class="btn btn-sm btn-outline-primary rounded-pill me-1" title="View Details">
+                        <i class="bi bi-eye"></i>
+                      </a>
+                      <a [routerLink]="['/prescriptions/new']" [queryParams]="{ appointmentId: appt.id, patientId: appt.patientId }" class="btn btn-sm btn-outline-danger rounded-pill me-1" title="Prescribe">
+                        <i class="bi bi-capsule"></i>
+                      </a>
+                      <a [routerLink]="['/medical-records/new']" [queryParams]="{ appointmentId: appt.id, patientId: appt.patientId }" class="btn btn-sm btn-outline-info rounded-pill" title="Add Record">
+                        <i class="bi bi-journal-plus"></i>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              </ng-container>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Diagnostic Records -->
+    <div class="col-12 col-lg-5">
+      <div class="card border-0 rounded-4 shadow-sm p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold text-dark mb-0">
+            <i class="bi bi-journal-medical text-danger me-2"></i>Recent Diagnoses
+          </h5>
+          <a [routerLink]="['/medical-records']" [queryParams]="{ doctorId: authService.currentUserValue?.profileId }" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            My Records
+          </a>
+        </div>
+
+        <div *ngIf="dashboard.recentMedicalRecordsList.length === 0" class="text-center py-4 text-muted small">
+          <i class="bi bi-journal-x d-block fs-3 mb-1 text-secondary"></i>
+          No clinical diagnostic entries found yet.
+        </div>
+
+        <div class="d-flex flex-column gap-3">
+          <div *ngFor="let record of dashboard.recentMedicalRecordsList" class="p-3 rounded-4 bg-light border">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+              <span class="fw-bold text-primary">{{ record.diagnosis }}</span>
+              <small class="text-muted">{{ record.recordDate }}</small>
+            </div>
+            <p class="text-muted small mb-2 text-truncate">{{ record.treatment || record.symptoms }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+              <small class="fw-semibold text-dark">{{ record.patientName }}</small>
+              <a [routerLink]="['/medical-records', record.id]" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 small">
+                View History
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-top d-flex gap-2">
+          <a routerLink="/prescriptions/new" class="btn btn-danger btn-sm rounded-pill flex-fill fw-semibold">
+            <i class="bi bi-plus-circle me-1"></i> New Prescription
+          </a>
+          <a routerLink="/medical-records/new" class="btn btn-info btn-sm text-white rounded-pill flex-fill fw-semibold">
+            <i class="bi bi-plus-circle me-1"></i> New Medical Record
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

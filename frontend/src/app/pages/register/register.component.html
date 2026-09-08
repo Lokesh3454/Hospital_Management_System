@@ -1,0 +1,192 @@
+<div class="auth-hero-wrapper py-5">
+  <!-- Dynamic Background Transition Slideshow with Ken Burns & Vivid Colors -->
+  <div class="bg-slideshow-container" aria-hidden="true">
+    <div class="bg-slide slide-1"></div>
+    <div class="bg-slide slide-2"></div>
+    <div class="bg-slide slide-3"></div>
+    <div class="bg-overlay"></div>
+    <div class="aurora-mesh"></div>
+  </div>
+
+  <!-- Ambient Floating Neon Aurora Light Orbs -->
+  <div class="ambient-glow-1" aria-hidden="true"></div>
+  <div class="ambient-glow-2" aria-hidden="true"></div>
+  <div class="ambient-glow-3" aria-hidden="true"></div>
+
+  <div class="container position-relative z-index-content">
+    <!-- Network Status Pill -->
+    <div class="d-flex justify-content-center mb-3">
+      <div class="glass-pill text-white px-3 py-1 rounded-pill d-inline-flex align-items-center gap-2 shadow-sm">
+        <span class="live-dot"></span>
+        <span class="small fw-semibold tracking-wide">MedPulse Healthcare &bull; Instant Portal Registration</span>
+      </div>
+    </div>
+
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-10 col-lg-7">
+        <!-- Glowing Iridescent Multi-Color Frame -->
+        <div class="glowing-card-frame">
+          <div class="luxury-glass-card shadow-2xl">
+            <!-- Top Vivid Rainbow Accent Bar -->
+            <div class="card-accent-bar"></div>
+
+            <div class="luxury-card-header">
+              <div class="glowing-brand-icon">
+                <i class="bi bi-person-plus-fill fs-1"></i>
+              </div>
+              <h3 class="gradient-title mb-1">Create Your Account</h3>
+              <div class="d-inline-flex align-items-center gap-2 mt-1 px-3 py-1 rounded-pill status-pill">
+                <span class="live-dot"></span>
+                <span class="small fw-semibold text-cyan-light">Join MedPulse Digital Health Network</span>
+              </div>
+            </div>
+
+            <div class="card-body p-4 p-md-5 pt-4">
+              <!-- Alert messages -->
+              <div class="alert alert-success bg-success-glass text-white d-flex align-items-center mb-4 py-2 border-0" *ngIf="successMessage">
+                <i class="bi bi-check-circle-fill me-2 fs-5 text-light"></i>
+                <span class="small">{{ successMessage }}</span>
+              </div>
+
+              <div class="alert alert-danger bg-danger-glass text-white d-flex align-items-center mb-4 py-2 border-0" *ngIf="errorMessage">
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-danger-light"></i>
+                <span class="small">{{ errorMessage }}</span>
+              </div>
+
+              <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+                <!-- Account Type / Role -->
+                <div class="mb-4">
+                  <label class="form-label fw-bold text-label-light small">
+                    <i class="bi bi-award me-1 text-cyan"></i> Select User Role
+                  </label>
+                  <div class="row g-2">
+                    <div class="col-4">
+                      <input type="radio" class="btn-check" id="rolePatient" value="PATIENT" formControlName="role">
+                      <label class="btn demo-pill-btn demo-pill-patient w-100 py-2 d-flex flex-column align-items-center gap-1" for="rolePatient" style="cursor: pointer;">
+                        <i class="bi bi-person-fill fs-5"></i>
+                        <span class="small fw-bold">Patient</span>
+                      </label>
+                    </div>
+                    <div class="col-4">
+                      <input type="radio" class="btn-check" id="roleDoctor" value="DOCTOR" formControlName="role">
+                      <label class="btn demo-pill-btn demo-pill-doctor w-100 py-2 d-flex flex-column align-items-center gap-1" for="roleDoctor" style="cursor: pointer;">
+                        <i class="bi bi-heart-pulse-fill fs-5"></i>
+                        <span class="small fw-bold">Doctor</span>
+                      </label>
+                    </div>
+                    <div class="col-4">
+                      <input type="radio" class="btn-check" id="roleRec" value="RECEPTIONIST" formControlName="role">
+                      <label class="btn demo-pill-btn demo-pill-receptionist w-100 py-2 d-flex flex-column align-items-center gap-1" for="roleRec" style="cursor: pointer;">
+                        <i class="bi bi-clipboard2-pulse-fill fs-5"></i>
+                        <span class="small fw-bold">Receptionist</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Names -->
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold text-label-light small">First Name *</label>
+                    <input type="text" class="form-control glass-input rounded-3" formControlName="firstName" placeholder="e.g. John"
+                           [class.is-invalid]="registerForm.get('firstName')?.touched && registerForm.get('firstName')?.invalid">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold text-label-light small">Last Name *</label>
+                    <input type="text" class="form-control glass-input rounded-3" formControlName="lastName" placeholder="e.g. Doe"
+                           [class.is-invalid]="registerForm.get('lastName')?.touched && registerForm.get('lastName')?.invalid">
+                  </div>
+                </div>
+
+                <!-- Username & Email -->
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold text-label-light small">Username *</label>
+                    <input type="text" class="form-control glass-input rounded-3" formControlName="username" placeholder="e.g. jdoe2024"
+                           [class.is-invalid]="registerForm.get('username')?.touched && registerForm.get('username')?.invalid">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold text-label-light small">Email Address *</label>
+                    <input type="email" class="form-control glass-input rounded-3" formControlName="email" placeholder="e.g. john@domain.com"
+                           [class.is-invalid]="registerForm.get('email')?.touched && registerForm.get('email')?.invalid">
+                  </div>
+                </div>
+
+                <!-- Password & Phone -->
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold text-label-light small">Password (Min 6 chars) *</label>
+                    <input type="password" class="form-control glass-input rounded-3" formControlName="password" placeholder="••••••••"
+                           [class.is-invalid]="registerForm.get('password')?.touched && registerForm.get('password')?.invalid">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold text-label-light small">Phone Number *</label>
+                    <input type="text" class="form-control glass-input rounded-3" formControlName="phone" placeholder="+1-555-0100"
+                           [class.is-invalid]="registerForm.get('phone')?.touched && registerForm.get('phone')?.invalid">
+                  </div>
+                </div>
+
+                <!-- Patient Specific Fields -->
+                <div *ngIf="isPatientRole" class="p-3 rounded-3 mb-3 border border-success border-opacity-25" style="background: rgba(16, 185, 129, 0.08); backdrop-filter: blur(8px);">
+                  <h6 class="fw-bold text-success mb-2 small"><i class="bi bi-info-circle-fill me-1"></i> Patient Profile Details</h6>
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <label class="form-label text-label-light small">Gender</label>
+                      <select class="form-select form-select-sm glass-input rounded-2" formControlName="gender">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label text-label-light small">Blood Group</label>
+                      <select class="form-select form-select-sm glass-input rounded-2" formControlName="bloodGroup">
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                      </select>
+                    </div>
+                    <div class="col-12 mt-2">
+                      <label class="form-label text-label-light small">Residential Address</label>
+                      <input type="text" class="form-control form-control-sm glass-input rounded-2" formControlName="address" placeholder="e.g. 123 Main Street">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Doctor Specific Fields -->
+                <div *ngIf="isDoctorRole" class="p-3 rounded-3 mb-3 border border-primary border-opacity-25" style="background: rgba(14, 165, 233, 0.08); backdrop-filter: blur(8px);">
+                  <h6 class="fw-bold text-cyan mb-2 small"><i class="bi bi-info-circle-fill me-1"></i> Doctor Profile Details</h6>
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <label class="form-label text-label-light small">Specialization</label>
+                      <input type="text" class="form-control form-control-sm glass-input rounded-2" formControlName="specialization" placeholder="e.g. Cardiologist">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label text-label-light small">Department</label>
+                      <input type="text" class="form-control form-control-sm glass-input rounded-2" formControlName="department" placeholder="e.g. Cardiology">
+                    </div>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-vibrant-gradient w-100 py-3 fw-bold rounded-3 mt-4 mb-3 shadow-lg" [disabled]="isLoading">
+                  <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+                  <span *ngIf="!isLoading"><i class="bi bi-person-check-fill me-2"></i> Register Account</span>
+                </button>
+
+                <div class="text-center small text-light-muted">
+                  Already registered? <a routerLink="/login" class="fw-bold text-cyan-accent text-decoration-none">Sign In here <i class="bi bi-arrow-right-short"></i></a>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

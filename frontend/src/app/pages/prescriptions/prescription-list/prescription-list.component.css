@@ -1,0 +1,27 @@
+.table th {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6c757d;
+  font-weight: 600;
+  background-color: #f8fafc;
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
+}
+
+.filter-tab-btn {
+  font-size: 0.875rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.filter-tab-btn:hover {
+  transform: translateY(-1px);
+}
+
+.table tbody tr {
+  transition: background-color 0.15s ease-in-out;
+}
+
+.table tbody tr:hover {
+  background-color: #fcfdfe;
+}

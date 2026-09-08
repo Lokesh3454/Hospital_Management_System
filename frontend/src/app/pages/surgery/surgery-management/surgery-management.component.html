@@ -1,0 +1,345 @@
+<div class="container-fluid py-4 ot-dashboard-wrapper">
+  <!-- Breadcrumbs & Header -->
+  <div class="row align-items-center mb-4">
+    <div class="col-md-7">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a [routerLink]="authService.getDashboardRouteForUser()" class="text-decoration-none">Dashboard</a></li>
+          <li class="breadcrumb-item"><a routerLink="/operations" class="text-decoration-none">Operations Hub</a></li>
+          <li class="breadcrumb-item active text-primary fw-semibold" aria-current="page">Operation Theater & Surgeries</li>
+        </ol>
+      </nav>
+      <h2 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+        <i class="bi bi-heart-pulse text-primary fs-2"></i>
+        Operation Theater (OT) & Surgical Scheduling
+      </h2>
+      <p class="text-muted small mb-0">Operating suite management, multi-disciplinary surgical teams, pre-op clearance, and PACU recovery tracking</p>
+    </div>
+
+    <div class="col-md-5 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end gap-2">
+      <button class="btn btn-outline-primary d-flex align-items-center gap-2" (click)="loadSchedules()">
+        <i class="bi bi-arrow-clockwise" [class.spin]="isLoading"></i> Refresh Schedule
+      </button>
+      <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" (click)="openScheduleModal()">
+        <i class="bi bi-calendar-plus-fill"></i> Schedule Surgical Suite
+      </button>
+    </div>
+  </div>
+
+  <!-- Telemetry Counter Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100 border-start border-danger border-4">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-danger small fw-semibold text-uppercase">Active In-Progress</div>
+            <h3 class="fw-bold mb-0 mt-1 text-danger">{{ inProgressCount }}</h3>
+            <span class="text-muted x-small">Surgeons in Theater</span>
+          </div>
+          <div class="stat-icon-wrapper bg-danger-subtle text-danger rounded-circle p-3">
+            <i class="bi bi-scissors fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100 border-start border-warning border-4">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-warning-emphasis small fw-semibold text-uppercase">In PACU Recovery</div>
+            <h3 class="fw-bold mb-0 mt-1 text-warning-emphasis">{{ inPacuCount }}</h3>
+            <span class="text-muted x-small">Post-Anesthesia Care</span>
+          </div>
+          <div class="stat-icon-wrapper bg-warning-subtle text-warning-emphasis rounded-circle p-3">
+            <i class="bi bi-hospital fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-primary small fw-semibold text-uppercase">Scheduled Today</div>
+            <h3 class="fw-bold mb-0 mt-1 text-dark">{{ scheduledCount }}</h3>
+            <span class="text-muted x-small">Pending Induction</span>
+          </div>
+          <div class="stat-icon-wrapper bg-primary-subtle text-primary rounded-circle p-3">
+            <i class="bi bi-calendar-check-fill fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold text-uppercase">Clearance Pending</div>
+            <h3 class="fw-bold mb-0 mt-1 text-secondary">{{ clearancePendingCount }}</h3>
+            <span class="text-muted x-small">Checklist incomplete</span>
+          </div>
+          <div class="stat-icon-wrapper bg-secondary-subtle text-secondary rounded-circle p-3">
+            <i class="bi bi-clipboard2-pulse fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div *ngIf="successMessage" class="alert alert-success border-0 rounded-3 shadow-sm alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i> {{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = null"></button>
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-danger border-0 rounded-3 shadow-sm alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+  </div>
+
+  <!-- Filter Toolbar -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-6">
+        <label class="form-label small text-muted fw-semibold mb-1">Operating Theater Suite</label>
+        <div class="btn-group w-100" role="group">
+          <button type="button" class="btn btn-sm" [ngClass]="selectedRoom === 'ALL' ? 'btn-primary' : 'btn-outline-secondary'" (click)="selectedRoom = 'ALL'">All Suites</button>
+          <button type="button" class="btn btn-sm" [ngClass]="selectedRoom === 'OT-1' ? 'btn-primary' : 'btn-outline-secondary'" (click)="selectedRoom = 'OT-1'">OT-1 General</button>
+          <button type="button" class="btn btn-sm" [ngClass]="selectedRoom === 'OT-2' ? 'btn-primary' : 'btn-outline-secondary'" (click)="selectedRoom = 'OT-2'">OT-2 Cardiac/Neuro</button>
+          <button type="button" class="btn btn-sm" [ngClass]="selectedRoom === 'OT-3' ? 'btn-primary' : 'btn-outline-secondary'" (click)="selectedRoom = 'OT-3'">OT-3 Ortho</button>
+          <button type="button" class="btn btn-sm" [ngClass]="selectedRoom === 'OT-4' ? 'btn-primary' : 'btn-outline-secondary'" (click)="selectedRoom = 'OT-4'">OT-4 Laparo</button>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label small text-muted fw-semibold mb-1">Status Filter</label>
+        <select class="form-select form-select-sm" [(ngModel)]="selectedStatus">
+          <option value="ALL">All Statuses</option>
+          <option value="IN_PROGRESS">In Progress (Surgeons Active)</option>
+          <option value="IN_PACU">In PACU (Recovery)</option>
+          <option value="SCHEDULED">Scheduled</option>
+          <option value="COMPLETED">Completed</option>
+          <option value="CANCELLED">Cancelled</option>
+        </select>
+      </div>
+
+      <div class="col-md-2 text-md-end mt-4">
+        <span class="text-muted small"><strong>{{ filteredSchedules.length }}</strong> procedures</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading OT Schedules...</span>
+    </div>
+    <p class="text-muted mt-2">Loading Operating Theater rosters...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && filteredSchedules.length === 0" class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white">
+    <div class="py-4">
+      <i class="bi bi-heart-pulse fs-1 text-muted"></i>
+      <h5 class="fw-bold mt-3 text-secondary">No Procedures Found</h5>
+      <p class="text-muted small">Try switching OT room filters or schedule a new procedure.</p>
+      <button class="btn btn-sm btn-outline-primary" (click)="selectedRoom = 'ALL'; selectedStatus = 'ALL'">Reset Filters</button>
+    </div>
+  </div>
+
+  <!-- Schedules Grid -->
+  <div *ngIf="!isLoading && filteredSchedules.length > 0" class="row g-3">
+    <div *ngFor="let s of filteredSchedules" class="col-12 col-xl-6">
+      <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100 surgery-card" [class.border-start-danger]="s.status === 'IN_PROGRESS'" [class.border-start-warning]="s.status === 'IN_PACU'">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <span class="badge bg-light text-dark font-monospace me-2">{{ s.surgeryNumber }}</span>
+            <span [class]="getStatusBadgeClass(s.status)">{{ s.status }}</span>
+          </div>
+          <div class="text-end">
+            <span class="badge bg-primary-subtle text-primary fw-semibold px-2 py-1">
+              <i class="bi bi-door-closed-fill me-1"></i> {{ s.otRoom }}
+            </span>
+          </div>
+        </div>
+
+        <h5 class="fw-bold text-dark mb-1">{{ s.procedureName }}</h5>
+        <div class="text-muted small mb-3">
+          <i class="bi bi-clock-fill text-secondary me-1"></i> {{ s.surgeryDate }} at {{ s.scheduledStartTime || '09:00' }} (Est. {{ s.estimatedDurationHours }} hrs)
+        </div>
+
+        <!-- Team & Patient Details -->
+        <div class="bg-light rounded-3 p-3 mb-3">
+          <div class="row g-2">
+            <div class="col-6">
+              <div class="text-muted x-small text-uppercase fw-semibold">Patient</div>
+              <div class="fw-bold text-dark">{{ s.patientName }}</div>
+            </div>
+            <div class="col-6">
+              <div class="text-muted x-small text-uppercase fw-semibold">Lead Surgeon</div>
+              <div class="fw-bold text-dark text-truncate">{{ s.leadSurgeonName }}</div>
+            </div>
+            <div class="col-6">
+              <div class="text-muted x-small text-uppercase fw-semibold">Anesthesiologist</div>
+              <div class="text-secondary small">{{ s.anesthesiologistName || 'Pending Assignment' }}</div>
+            </div>
+            <div class="col-6">
+              <div class="text-muted x-small text-uppercase fw-semibold">Scrub Nurse</div>
+              <div class="text-secondary small">{{ s.scrubNurseName || 'Pending Assignment' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pre-Op Safety Checklist -->
+        <div class="mb-3">
+          <div class="text-muted x-small text-uppercase fw-bold mb-2">Pre-Op Safety Checklist (Click to toggle)</div>
+          <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-sm rounded-pill py-0 px-2" [ngClass]="s.preOpCleared ? 'btn-success' : 'btn-outline-secondary'" (click)="toggleChecklist(s, 'preOpCleared')">
+              <i class="bi" [ngClass]="s.preOpCleared ? 'bi-check-circle-fill' : 'bi-circle'"></i> Pre-Op Cleared
+            </button>
+            <button class="btn btn-sm rounded-pill py-0 px-2" [ngClass]="s.anesthesiaCleared ? 'btn-success' : 'btn-outline-secondary'" (click)="toggleChecklist(s, 'anesthesiaCleared')">
+              <i class="bi" [ngClass]="s.anesthesiaCleared ? 'bi-check-circle-fill' : 'bi-circle'"></i> Anesthesia Cleared
+            </button>
+            <button class="btn btn-sm rounded-pill py-0 px-2" [ngClass]="s.consentSigned ? 'btn-success' : 'btn-outline-secondary'" (click)="toggleChecklist(s, 'consentSigned')">
+              <i class="bi" [ngClass]="s.consentSigned ? 'bi-check-circle-fill' : 'bi-circle'"></i> Consent Signed
+            </button>
+            <button class="btn btn-sm rounded-pill py-0 px-2" [ngClass]="s.bloodReserved ? 'btn-success' : 'btn-outline-secondary'" (click)="toggleChecklist(s, 'bloodReserved')">
+              <i class="bi" [ngClass]="s.bloodReserved ? 'bi-check-circle-fill' : 'bi-circle'"></i> Blood Reserved
+            </button>
+          </div>
+        </div>
+
+        <!-- PACU Recovery Score if available -->
+        <div *ngIf="s.status === 'IN_PACU' || s.status === 'COMPLETED'" class="alert alert-light border rounded-3 p-2 mb-3 d-flex justify-content-between align-items-center">
+          <div>
+            <span class="fw-semibold text-dark small"><i class="bi bi-activity text-warning me-1"></i> PACU Aldrete Score:</span>
+            <span class="badge ms-2" [ngClass]="(s.pacuRecoveryScore ?? 0) >= 9 ? 'bg-success' : 'bg-warning text-dark'">
+              {{ s.pacuRecoveryScore ?? 'N/A' }} / 10
+            </span>
+          </div>
+          <span class="x-small text-muted">{{ (s.pacuRecoveryScore ?? 0) >= 9 ? 'Ready for Ward Transfer' : 'Monitoring Vital Stability' }}</span>
+        </div>
+
+        <!-- Action Footer -->
+        <div class="d-flex justify-content-end gap-2 pt-2 border-top mt-auto">
+          <button class="btn btn-sm btn-outline-primary" (click)="openStatusModal(s)">
+            <i class="bi bi-arrow-repeat me-1"></i> Update Suite Status
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schedule Surgical Suite Modal -->
+  <div *ngIf="showScheduleModal" class="modal-backdrop-custom d-flex align-items-center justify-content-center p-3">
+    <div class="card border-0 rounded-4 shadow-lg p-4 bg-white modal-dialog-custom">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+          <i class="bi bi-calendar-check-fill text-primary"></i> Schedule Operating Suite
+        </h5>
+        <button type="button" class="btn-close" (click)="closeScheduleModal()"></button>
+      </div>
+
+      <form (ngSubmit)="saveSchedule()">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Patient Name *</label>
+            <input type="text" class="form-control" [(ngModel)]="newSurgery.patientName" name="patientName" placeholder="e.g. Margaret Taylor" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Surgical Procedure *</label>
+            <input type="text" class="form-control" [(ngModel)]="newSurgery.procedureName" name="procedureName" placeholder="e.g. Laparoscopic Cholecystectomy" required>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Operating Theater Suite *</label>
+            <select class="form-select" [(ngModel)]="newSurgery.otRoom" name="otRoom">
+              <option value="OT-1 (General Surgery)">OT-1 (General Surgery)</option>
+              <option value="OT-2 (Cardiac & Neuro)">OT-2 (Cardiac & Neuro)</option>
+              <option value="OT-3 (Orthopedics & Trauma)">OT-3 (Orthopedics & Trauma)</option>
+              <option value="OT-4 (Minimally Invasive)">OT-4 (Minimally Invasive)</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Lead Surgeon *</label>
+            <input type="text" class="form-control" [(ngModel)]="newSurgery.leadSurgeonName" name="leadSurgeonName" placeholder="e.g. Dr. Rajesh Sharma, MD" required>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Anesthesiologist</label>
+            <input type="text" class="form-control" [(ngModel)]="newSurgery.anesthesiologistName" name="anesthesiologistName" placeholder="e.g. Dr. Anita Roy, MD">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Scrub Nurse</label>
+            <input type="text" class="form-control" [(ngModel)]="newSurgery.scrubNurseName" name="scrubNurseName" placeholder="e.g. Nurse Sarah Lee, RN">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Date</label>
+            <input type="date" class="form-control" [(ngModel)]="newSurgery.surgeryDate" name="surgeryDate" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Start Time</label>
+            <input type="time" class="form-control" [(ngModel)]="newSurgery.scheduledStartTime" name="scheduledStartTime">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Est. Duration (Hrs)</label>
+            <input type="number" step="0.5" class="form-control" [(ngModel)]="newSurgery.estimatedDurationHours" name="estimatedDurationHours">
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4 pt-2 border-top">
+          <button type="button" class="btn btn-light" (click)="closeScheduleModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" [disabled]="isSubmitting">
+            <i class="bi bi-check2-circle me-1"></i> Confirm Booking
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Status & PACU Modal -->
+  <div *ngIf="showStatusModal && selectedSurgeryForStatus" class="modal-backdrop-custom d-flex align-items-center justify-content-center p-3">
+    <div class="card border-0 rounded-4 shadow-lg p-4 bg-white modal-dialog-custom">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark">
+          Transition Suite Status: {{ selectedSurgeryForStatus.surgeryNumber }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeStatusModal()"></button>
+      </div>
+
+      <p class="text-muted small">Procedure: <strong>{{ selectedSurgeryForStatus.procedureName }}</strong> ({{ selectedSurgeryForStatus.patientName }})</p>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Surgery Suite Phase</label>
+        <select class="form-select" [(ngModel)]="targetStatus">
+          <option value="SCHEDULED">SCHEDULED (Awaiting Theater Prep)</option>
+          <option value="IN_PROGRESS">IN_PROGRESS (Surgeons Scrubbed In)</option>
+          <option value="IN_PACU">IN_PACU (Post-Anesthesia Care Unit)</option>
+          <option value="COMPLETED">COMPLETED (Transferred to Ward/ICU)</option>
+          <option value="CANCELLED">CANCELLED</option>
+        </select>
+      </div>
+
+      <div *ngIf="targetStatus === 'IN_PACU' || targetStatus === 'COMPLETED'" class="mb-3 bg-light p-3 rounded-3">
+        <label class="form-label small fw-semibold">PACU Aldrete Recovery Score (0 - 10)</label>
+        <input type="range" class="form-range" min="0" max="10" step="1" [(ngModel)]="pacuScore">
+        <div class="d-flex justify-content-between text-muted x-small">
+          <span>0 (Deep sedation)</span>
+          <span class="fw-bold text-dark fs-6">{{ pacuScore }} / 10</span>
+          <span>10 (Fully recovered)</span>
+        </div>
+        <div class="mt-2 text-muted x-small">
+          Score &ge; 9 indicates eligibility for inpatient ward or step-down transfer.
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="button" class="btn btn-light" (click)="closeStatusModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="updateSurgeryStatus()">Update Status</button>
+      </div>
+    </div>
+  </div>
+</div>

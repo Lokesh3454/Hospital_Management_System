@@ -1,0 +1,504 @@
+<div class="container-fluid py-4">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1 small">
+          <li class="breadcrumb-item"><a [routerLink]="authService.getDashboardRouteForUser()">Dashboard</a></li>
+          <li class="breadcrumb-item"><a routerLink="/operations">Hospital Operations</a></li>
+          <li class="breadcrumb-item active">Laboratory & Diagnostics</li>
+        </ol>
+      </nav>
+      <h2 class="h3 fw-bold mb-0 text-dark">
+        <i class="bi bi-flask-fill text-primary me-2"></i>Laboratory & Diagnostics Hub
+      </h2>
+      <p class="text-muted small mb-0">Pathology specimen tracking, clinical chemistry, and diagnostic reports</p>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button *ngIf="authService.hasAnyRole(['ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST'])"
+              (click)="openOrderModal()" class="btn btn-primary rounded-pill px-3 shadow-sm">
+        <i class="bi bi-plus-circle me-1"></i> Order New Lab Test
+      </button>
+      <button (click)="loadLabTests()" class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm mb-4">
+    <i class="bi bi-check-circle-fill me-2"></i>{{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = null"></button>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm mb-4">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+  </div>
+
+  <!-- KPI Cards (Interactive Clickable Filters) -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-4">
+      <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-start border-primary border-4 kpi-clickable"
+           [class.active-kpi]="selectedStatus === 'ALL'"
+           (click)="filterByStatus('ALL')"
+           role="button"
+           title="Click to view all diagnostic orders">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Total Diagnostic Orders</div>
+            <div class="h3 fw-bold text-dark mb-0">{{ totalOrders }}</div>
+            <span class="small text-muted">All specimen requests</span>
+          </div>
+          <i class="bi bi-grid fs-3 text-primary opacity-50"></i>
+        </div>
+        <div class="mt-2 text-primary small fw-semibold">
+          <i class="bi bi-funnel me-1"></i> {{ selectedStatus === 'ALL' ? 'Showing All Orders' : 'Click to Show All' }}
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-start border-warning border-4 kpi-clickable"
+           [class.active-kpi]="selectedStatus === 'PENDING'"
+           (click)="filterByStatus('PENDING')"
+           role="button"
+           title="Click to filter active pending orders">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Active / Pending In Lab</div>
+            <div class="h3 fw-bold text-warning-emphasis mb-0">{{ pendingOrders }}</div>
+            <span class="small text-muted">Specimen collection & analysis</span>
+          </div>
+          <i class="bi bi-hourglass-split fs-3 text-warning opacity-50"></i>
+        </div>
+        <div class="mt-2 text-warning-emphasis small fw-semibold">
+          <i class="bi bi-funnel-fill me-1"></i> {{ selectedStatus === 'PENDING' ? 'Filtered: Pending In Lab' : 'Click to Filter Pending' }}
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-start border-success border-4 kpi-clickable"
+           [class.active-kpi]="selectedStatus === 'COMPLETED'"
+           (click)="filterByStatus('COMPLETED')"
+           role="button"
+           title="Click to filter completed reports">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Published & Verified Results</div>
+            <div class="h3 fw-bold text-success mb-0">{{ completedOrders }}</div>
+            <span class="small text-muted">Completed diagnostic reports</span>
+          </div>
+          <i class="bi bi-check-circle fs-3 text-success opacity-50"></i>
+        </div>
+        <div class="mt-2 text-success small fw-semibold">
+          <i class="bi bi-funnel-fill me-1"></i> {{ selectedStatus === 'COMPLETED' ? 'Filtered: Verified Results' : 'Click to Filter Completed' }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Pill Bar -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-sm rounded-pill px-3"
+              [ngClass]="selectedStatus === 'ALL' ? 'btn-primary' : 'btn-outline-secondary'"
+              (click)="selectedStatus = 'ALL'">
+        All Orders ({{ totalOrders }})
+      </button>
+      <button class="btn btn-sm rounded-pill px-3"
+              [ngClass]="selectedStatus === 'ORDERED' ? 'btn-info text-white' : 'btn-outline-info'"
+              (click)="selectedStatus = 'ORDERED'">
+        Ordered
+      </button>
+      <button class="btn btn-sm rounded-pill px-3"
+              [ngClass]="selectedStatus === 'SAMPLE_COLLECTED' ? 'btn-warning text-dark' : 'btn-outline-warning'"
+              (click)="selectedStatus = 'SAMPLE_COLLECTED'">
+        Sample Collected
+      </button>
+      <button class="btn btn-sm rounded-pill px-3"
+              [ngClass]="selectedStatus === 'COMPLETED' ? 'btn-success' : 'btn-outline-success'"
+              (click)="selectedStatus = 'COMPLETED'">
+        Completed ({{ completedOrders }})
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div class="text-muted mt-2">Loading diagnostic orders...</div>
+  </div>
+
+  <!-- Orders Table -->
+  <div *ngIf="!isLoading" class="card border-0 rounded-4 shadow-sm bg-white overflow-hidden">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 25%">Test Name & Code</th>
+            <th style="width: 20%">Patient & Doctor</th>
+            <th style="width: 15%">Status</th>
+            <th style="width: 15%">Findings / Value</th>
+            <th style="width: 10%">Normal Range</th>
+            <th class="text-end" style="width: 15%">Clinical Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let test of filteredTests"
+              (click)="openTestDetails(test)"
+              style="cursor: pointer;"
+              class="lab-interactive-row"
+              title="Click to view full diagnostic order & verified findings">
+            <td>
+              <div class="fw-bold text-dark">{{ test.testName }}</div>
+              <div class="small text-muted font-monospace">{{ test.testCode }} &bull; {{ test.category }}</div>
+            </td>
+            <td>
+              <div class="fw-semibold text-dark">{{ test.patientName || 'Patient #' + test.patientId }}</div>
+              <div class="small text-muted">{{ test.doctorName || 'Attending Staff' }}</div>
+            </td>
+            <td>
+              <span class="badge px-3 py-1 rounded-pill"
+                    [ngClass]="{
+                      'bg-info-subtle text-info': test.status === 'ORDERED',
+                      'bg-warning-subtle text-dark': test.status === 'SAMPLE_COLLECTED',
+                      'bg-primary-subtle text-primary': test.status === 'IN_PROGRESS',
+                      'bg-success-subtle text-success': test.status === 'COMPLETED'
+                    }">
+                {{ test.status }}
+              </span>
+            </td>
+            <td>
+              <div *ngIf="test.status === 'COMPLETED'">
+                <strong [ngClass]="test.interpretation === 'Elevated' || test.interpretation === 'Critical' ? 'text-danger' : 'text-dark'">
+                  {{ test.resultValue }}
+                </strong>
+                <span *ngIf="test.interpretation" class="badge ms-1"
+                      [ngClass]="test.interpretation === 'Normal' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+                  {{ test.interpretation }}
+                </span>
+              </div>
+              <span *ngIf="test.status !== 'COMPLETED'" class="text-muted small fst-italic">Pending results</span>
+            </td>
+            <td class="small text-muted">{{ test.normalRange || '-' }}</td>
+            <td class="text-end" (click)="$event.stopPropagation()">
+              <!-- If Ordered -> Collect Sample -->
+              <button *ngIf="test.status === 'ORDERED' && authService.hasAnyRole(['ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST'])"
+                      (click)="updateStatus(test, 'SAMPLE_COLLECTED')"
+                      class="btn btn-sm btn-outline-warning rounded-pill">
+                <i class="bi bi-droplet-fill me-1"></i> Collect Sample
+              </button>
+
+              <!-- If Collected -> Record Results -->
+              <button *ngIf="test.status === 'SAMPLE_COLLECTED' && authService.hasAnyRole(['ROLE_ADMIN', 'ROLE_DOCTOR'])"
+                      (click)="openResultModal(test)"
+                      class="btn btn-sm btn-primary rounded-pill">
+                <i class="bi bi-pencil-square me-1"></i> Input Results
+              </button>
+
+              <!-- If Completed -> View Details / Edit Results -->
+              <button *ngIf="test.status === 'COMPLETED' && authService.hasAnyRole(['ROLE_ADMIN', 'ROLE_DOCTOR'])"
+                      (click)="openResultModal(test)"
+                      class="btn btn-sm btn-outline-secondary rounded-pill">
+                <i class="bi bi-eye me-1"></i> Review
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredTests.length === 0">
+            <td colspan="6" class="text-center py-5 text-muted">
+              <i class="bi bi-flask fs-1 d-block mb-2 text-secondary"></i>
+              No diagnostic orders found.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Publish Test Results (Zero reset buttons!) -->
+<div *ngIf="showResultModal" class="modal-backdrop fade show"></div>
+<div *ngIf="showResultModal" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold text-dark">
+          <i class="bi bi-clipboard2-pulse text-primary me-2"></i>Publish Diagnostic Findings
+        </h5>
+        <button type="button" class="btn-close" (click)="closeResultModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="mb-3 p-2 bg-light rounded-3 small">
+          <strong>Test:</strong> {{ selectedTestForResult?.testName }} &bull;
+          <strong>Ref Range:</strong> {{ selectedTestForResult?.normalRange }}
+        </div>
+
+        <form (ngSubmit)="saveResults()">
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Result Finding / Measurement <span class="text-danger">*</span></label>
+            <input type="text" class="form-control rounded-3" [(ngModel)]="resultValue" name="resultValue"
+                   placeholder="e.g. 7.8 x10^3/uL, 215 mg/dL" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Clinical Interpretation</label>
+            <select class="form-select rounded-3" [(ngModel)]="resultInterpretation" name="resultInterpretation">
+              <option value="Normal">Normal</option>
+              <option value="Low">Low / Deficient</option>
+              <option value="Elevated">Elevated / High</option>
+              <option value="Critical">Critical / Alert</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Pathologist Remarks / Recommendations</label>
+            <textarea class="form-control rounded-3" rows="3" [(ngModel)]="resultRemarks" name="resultRemarks"
+                      placeholder="Clinical remarks for attending physician..."></textarea>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" (click)="closeResultModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary rounded-pill px-4" [disabled]="!resultValue || isSubmittingResult">
+              <span *ngIf="isSubmittingResult" class="spinner-border spinner-border-sm me-1"></span>
+              Publish Findings
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Order New Lab Test (Zero reset buttons!) -->
+<div *ngIf="showOrderModal" class="modal-backdrop fade show"></div>
+<div *ngIf="showOrderModal" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold text-dark">
+          <i class="bi bi-plus-circle text-primary me-2"></i>Order Diagnostic Investigation
+        </h5>
+        <button type="button" class="btn-close" (click)="closeOrderModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form (ngSubmit)="saveOrder()">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Patient <span class="text-danger">*</span></label>
+              <select class="form-select rounded-3" [(ngModel)]="newOrder.patientId" name="patientId" required>
+                <option [ngValue]="0" disabled>-- Select Patient --</option>
+                <option *ngFor="let p of patients" [value]="p.patientId || p.id">
+                  {{ p.name }} &bull; {{ p.gender }} ({{ p.phone }})
+                </option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Referring Doctor</label>
+              <select class="form-select rounded-3" [(ngModel)]="newOrder.doctorId" name="doctorId">
+                <option [ngValue]="undefined">-- Select Doctor (Optional) --</option>
+                <option *ngFor="let d of doctors" [value]="d.doctorId">
+                  Dr. {{ d.name }} &mdash; {{ d.specialization }}
+                </option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Test Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control rounded-3" [(ngModel)]="newOrder.testName" name="testName" placeholder="e.g. Complete Blood Count (CBC)" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Category</label>
+              <select class="form-select rounded-3" [(ngModel)]="newOrder.category" name="category">
+                <option value="Hematology">Hematology</option>
+                <option value="Biochemistry">Biochemistry</option>
+                <option value="Endocrinology">Endocrinology</option>
+                <option value="Microbiology">Microbiology</option>
+                <option value="Radiology">Radiology & Imaging</option>
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Normal Reference Range</label>
+              <input type="text" class="form-control rounded-3" [(ngModel)]="newOrder.normalRange" name="normalRange" placeholder="e.g. 4.5 - 11.0 x10^3/uL">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Estimated Cost ($)</label>
+              <input type="number" class="form-control rounded-3" [(ngModel)]="newOrder.cost" name="cost" placeholder="e.g. 450">
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-4 mt-3 border-top">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" (click)="closeOrderModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary rounded-pill px-4" [disabled]="!newOrder.patientId || !newOrder.testName || isSubmittingOrder">
+              <span *ngIf="isSubmittingOrder" class="spinner-border spinner-border-sm me-1"></span>
+              Create Lab Order
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================== -->
+<!-- INTERACTIVE LAB TEST DETAILS & REPORT MODAL          -->
+<!-- (Triggered upon clicking any lab order row/card)     -->
+<!-- ==================================================== -->
+<div *ngIf="showTestDetailsModal && selectedTestForDetails" class="modal-backdrop fade show"></div>
+<div *ngIf="showTestDetailsModal && selectedTestForDetails" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <!-- Modal Header -->
+      <div class="modal-header p-4"
+           [ngClass]="{
+             'bg-info text-white': selectedTestForDetails.status === 'ORDERED',
+             'bg-warning text-dark': selectedTestForDetails.status === 'SAMPLE_COLLECTED',
+             'bg-primary text-white': selectedTestForDetails.status === 'IN_PROGRESS',
+             'bg-success text-white': selectedTestForDetails.status === 'COMPLETED'
+           }">
+        <div>
+          <span class="badge bg-white text-dark fw-bold mb-1 font-monospace">
+            ORDER #{{ selectedTestForDetails.testCode }} &bull; {{ selectedTestForDetails.category }}
+          </span>
+          <h4 class="modal-title fw-bold mb-0">
+            <i class="bi bi-flask-fill me-2"></i>{{ selectedTestForDetails.testName }}
+          </h4>
+          <small class="opacity-75">
+            Patient: {{ selectedTestForDetails.patientName || 'Patient #' + selectedTestForDetails.patientId }} &bull; Doctor: {{ selectedTestForDetails.doctorName || 'Staff Physician' }}
+          </small>
+        </div>
+        <button type="button" class="btn-close" [class.btn-close-white]="selectedTestForDetails.status !== 'SAMPLE_COLLECTED'" (click)="closeTestDetailsModal()"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body p-4">
+        <!-- Status & Specimen Workflow Bar -->
+        <div class="d-flex justify-content-between align-items-center p-3 rounded-4 mb-4 border"
+             [ngClass]="{
+               'bg-info-subtle border-info-subtle': selectedTestForDetails.status === 'ORDERED',
+               'bg-warning-subtle border-warning-subtle': selectedTestForDetails.status === 'SAMPLE_COLLECTED',
+               'bg-primary-subtle border-primary-subtle': selectedTestForDetails.status === 'IN_PROGRESS',
+               'bg-success-subtle border-success-subtle': selectedTestForDetails.status === 'COMPLETED'
+             }">
+          <div class="d-flex align-items-center gap-3">
+            <div class="p-3 rounded-circle"
+                 [ngClass]="{
+                   'bg-info text-white': selectedTestForDetails.status === 'ORDERED',
+                   'bg-warning text-dark': selectedTestForDetails.status === 'SAMPLE_COLLECTED',
+                   'bg-primary text-white': selectedTestForDetails.status === 'IN_PROGRESS',
+                   'bg-success text-white': selectedTestForDetails.status === 'COMPLETED'
+                 }">
+              <i class="bi fs-4"
+                 [ngClass]="{
+                   'bi-clock-history': selectedTestForDetails.status === 'ORDERED',
+                   'bi-droplet-fill': selectedTestForDetails.status === 'SAMPLE_COLLECTED',
+                   'bi-gear-wide-connected': selectedTestForDetails.status === 'IN_PROGRESS',
+                   'bi-patch-check-fill': selectedTestForDetails.status === 'COMPLETED'
+                 }"></i>
+            </div>
+            <div>
+              <div class="small fw-semibold text-uppercase text-muted">Pipeline Status</div>
+              <h5 class="fw-bold mb-0 text-dark">{{ selectedTestForDetails.status }}</h5>
+              <small class="text-muted" *ngIf="selectedTestForDetails.status === 'ORDERED'">Awaiting specimen phlebotomy collection</small>
+              <small class="text-muted" *ngIf="selectedTestForDetails.status === 'SAMPLE_COLLECTED'">Specimen in transit to pathology laboratory</small>
+              <small class="text-muted" *ngIf="selectedTestForDetails.status === 'IN_PROGRESS'">Analyzer processing diagnostic specimen</small>
+              <small class="text-muted" *ngIf="selectedTestForDetails.status === 'COMPLETED'">Verified & published by clinical pathologist</small>
+            </div>
+          </div>
+          <div class="text-end">
+            <div class="small text-muted">Diagnostic Fee:</div>
+            <div class="h4 fw-bold text-dark mb-0">${{ selectedTestForDetails.cost }}</div>
+          </div>
+        </div>
+
+        <!-- Pathology Findings Results Card (If Completed) -->
+        <div *ngIf="selectedTestForDetails.status === 'COMPLETED'" class="card border rounded-4 p-4 bg-light mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold text-dark mb-0">
+              <i class="bi bi-clipboard2-pulse-fill text-success me-2"></i>Published Clinical Findings
+            </h6>
+            <span class="badge px-3 py-1 rounded-pill"
+                  [ngClass]="selectedTestForDetails.interpretation === 'Normal' ? 'bg-success text-white' : 'bg-danger text-white'">
+              {{ selectedTestForDetails.interpretation }}
+            </span>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-6 col-md-4">
+              <span class="text-muted small">Measured Result Value</span>
+              <div class="h4 fw-bold mb-0"
+                   [ngClass]="selectedTestForDetails.interpretation === 'Elevated' || selectedTestForDetails.interpretation === 'Critical' ? 'text-danger' : 'text-success'">
+                {{ selectedTestForDetails.resultValue }}
+              </div>
+            </div>
+            <div class="col-6 col-md-4">
+              <span class="text-muted small">Standard Reference Range</span>
+              <div class="fw-bold text-dark fs-6">{{ selectedTestForDetails.normalRange || '-' }}</div>
+            </div>
+            <div class="col-12 col-md-4">
+              <span class="text-muted small">Unit of Measure</span>
+              <div class="fw-bold text-dark fs-6">{{ selectedTestForDetails.unit || 'Standard' }}</div>
+            </div>
+          </div>
+
+          <div *ngIf="selectedTestForDetails.remarks" class="p-3 bg-white rounded-3 border small">
+            <strong class="text-dark">Pathologist Remarks:</strong> {{ selectedTestForDetails.remarks }}
+          </div>
+        </div>
+
+        <!-- Pending Workflow Action (If not completed) -->
+        <div *ngIf="selectedTestForDetails.status !== 'COMPLETED'" class="p-4 bg-light rounded-4 border mb-4 text-center">
+          <i class="bi bi-hourglass-split text-warning display-4 mb-2 d-block"></i>
+          <h6 class="fw-bold text-dark mb-1">Diagnostic Report Pending Verification</h6>
+          <p class="text-muted small mb-3">Follow the clinical laboratory workflow below to collect specimen or input findings:</p>
+
+          <div class="d-flex justify-content-center gap-2">
+            <button *ngIf="selectedTestForDetails.status === 'ORDERED'"
+                    (click)="updateStatus(selectedTestForDetails, 'SAMPLE_COLLECTED')"
+                    class="btn btn-warning text-dark rounded-pill px-4 shadow-sm">
+              <i class="bi bi-droplet-fill me-1"></i> Collect Specimen Sample
+            </button>
+            <button *ngIf="selectedTestForDetails.status === 'SAMPLE_COLLECTED' || selectedTestForDetails.status === 'ORDERED'"
+                    (click)="closeTestDetailsModal(); openResultModal(selectedTestForDetails)"
+                    class="btn btn-primary rounded-pill px-4 shadow-sm">
+              <i class="bi bi-pencil-square me-1"></i> Input & Publish Findings
+            </button>
+          </div>
+        </div>
+
+        <!-- Order Metadata -->
+        <div class="row g-2 small text-muted pt-2 border-top">
+          <div class="col-6 col-md-4">
+            <span>Order Date:</span> <strong class="text-dark">{{ selectedTestForDetails.orderDate | date:'mediumDate' }}</strong>
+          </div>
+          <div class="col-6 col-md-4">
+            <span>Specimen Type:</span> <strong class="text-dark">{{ selectedTestForDetails.category }} Specimen</strong>
+          </div>
+          <div class="col-12 col-md-4">
+            <span>Billing Status:</span> <span class="badge bg-light text-secondary border">Itemized on Inpatient Bill</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeTestDetailsModal()">Close</button>
+        <div class="d-flex gap-2">
+          <button (click)="printLabReport()" class="btn btn-outline-dark rounded-pill px-3">
+            <i class="bi bi-printer me-1"></i> Print Pathology Slip
+          </button>
+          <button *ngIf="selectedTestForDetails.status === 'COMPLETED' && authService.hasAnyRole(['ROLE_ADMIN', 'ROLE_DOCTOR'])"
+                  (click)="closeTestDetailsModal(); openResultModal(selectedTestForDetails)"
+                  class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="bi bi-pencil me-1"></i> Edit Findings
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

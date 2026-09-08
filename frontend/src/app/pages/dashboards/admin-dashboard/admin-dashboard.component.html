@@ -1,0 +1,392 @@
+<div class="container-fluid py-4 px-md-4">
+  <!-- Welcome Banner -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 rounded-4 shadow-sm bg-gradient-admin text-white p-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+          <div>
+            <span class="badge bg-white text-danger fw-bold mb-2">System Administrator</span>
+            <h2 class="fw-bold mb-1">Welcome back, {{ authService.currentUserValue?.firstName }}!</h2>
+            <p class="text-white-50 mb-0">Hospital Management System Central Administrative Dashboard</p>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-light fw-semibold text-danger px-3 py-2 rounded-pill shadow-sm" (click)="loadDashboardData()" [disabled]="isLoading">
+              <i class="bi bi-arrow-clockwise me-1" [ngClass]="{'spin': isLoading}"></i> Refresh Live Data
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading && !dashboard" class="text-center py-5">
+    <div class="spinner-border text-danger" role="status"></div>
+    <p class="text-muted small mt-2">Connecting to live database metrics...</p>
+  </div>
+
+  <!-- Live Key Metrics Row -->
+  <div *ngIf="dashboard" class="row g-3 mb-4">
+    <!-- Total Patients -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a routerLink="/patients" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Total Patients</div>
+            <h3 class="fw-bold mb-0 text-dark">{{ dashboard.totalPatients }}</h3>
+            <small class="text-success"><i class="bi bi-check-circle"></i> Registered in system</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> View Patients</div>
+          </div>
+          <div class="stat-icon bg-success-subtle text-success">
+            <i class="bi bi-people fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Total Doctors -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a routerLink="/doctors" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Total Doctors</div>
+            <h3 class="fw-bold mb-0 text-dark">{{ dashboard.totalDoctors }}</h3>
+            <small class="text-primary"><i class="bi bi-award"></i> Active specialists</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> Manage Doctors</div>
+          </div>
+          <div class="stat-icon bg-primary-subtle text-primary">
+            <i class="bi bi-heart-pulse fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Total Appointments -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a routerLink="/appointments" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Total Appointments</div>
+            <h3 class="fw-bold mb-0 text-dark">{{ dashboard.totalAppointments }}</h3>
+            <small class="text-info"><i class="bi bi-calendar2-check"></i> Across all clinics</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> View All Appointments</div>
+          </div>
+          <div class="stat-icon bg-info-subtle text-info">
+            <i class="bi bi-calendar-event fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Pending Bills -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a [routerLink]="['/bills']" [queryParams]="{ status: 'PENDING' }" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Pending Bills</div>
+            <h3 class="fw-bold mb-0 text-warning">{{ dashboard.pendingBills }}</h3>
+            <small class="text-warning"><i class="bi bi-exclamation-circle"></i> ${{ dashboard.pendingBillsAmount | number:'1.2-2' }} due</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> View Pending Invoices</div>
+          </div>
+          <div class="stat-icon bg-warning-subtle text-warning">
+            <i class="bi bi-receipt-cutoff fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Today's Appointments -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a [routerLink]="['/appointments']" [queryParams]="{ filter: 'today' }" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Today's Appointments</div>
+            <h3 class="fw-bold mb-0 text-danger">{{ dashboard.todayAppointments }}</h3>
+            <small class="text-danger"><i class="bi bi-clock-history"></i> Scheduled for today</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> Filter Today's Queue</div>
+          </div>
+          <div class="stat-icon bg-danger-subtle text-danger">
+            <i class="bi bi-clock fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Hospital Operations Command Center Cards -->
+  <div *ngIf="dashboard" class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h5 class="fw-bold text-dark mb-0">
+          <i class="bi bi-grid-fill text-danger me-2"></i>Hospital Operations Command Center
+        </h5>
+        <p class="text-muted small mb-0">Inpatient care, pharmacy stock, pathology diagnostics, OPD queues & executive analytics</p>
+      </div>
+      <a routerLink="/operations" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+        <i class="bi bi-grid me-1"></i> Full Operations Hub
+      </a>
+    </div>
+
+    <div class="row g-3">
+      <!-- 1. Bed Management Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <a routerLink="/beds" class="card border-0 rounded-4 shadow-sm p-3 h-100 text-decoration-none transition-hover border-start border-primary border-4 bg-white">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="d-flex align-items-center gap-3">
+              <div class="stat-icon bg-primary-subtle text-primary">
+                <i class="bi bi-hospital fs-4"></i>
+              </div>
+              <div>
+                <div class="text-muted small fw-semibold">Bed & Ward Care</div>
+                <h5 class="fw-bold text-dark mb-0">Inpatient Wards</h5>
+              </div>
+            </div>
+            <span class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 small">Wards Live</span>
+          </div>
+          <p class="small text-muted mb-2">Admit patients, check ICU/Trauma availability, and monitor floor telemetry.</p>
+          <div class="d-flex justify-content-between align-items-center pt-2 border-top small text-primary fw-semibold">
+            <span><i class="bi bi-door-open me-1"></i> Manage Hospital Beds</span>
+            <i class="bi bi-arrow-right"></i>
+          </div>
+        </a>
+      </div>
+
+      <!-- 2. Pharmacy Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <a routerLink="/pharmacy" class="card border-0 rounded-4 shadow-sm p-3 h-100 text-decoration-none transition-hover border-start border-success border-4 bg-white">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="d-flex align-items-center gap-3">
+              <div class="stat-icon bg-success-subtle text-success">
+                <i class="bi bi-capsule fs-4"></i>
+              </div>
+              <div>
+                <div class="text-muted small fw-semibold">Pharmacy & Stock</div>
+                <h5 class="fw-bold text-dark mb-0">Drug Inventory</h5>
+              </div>
+            </div>
+            <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1 small">Catalog</span>
+          </div>
+          <p class="small text-muted mb-2">1-Click stock adjustments, formulation thresholds, and reorder warnings.</p>
+          <div class="d-flex justify-content-between align-items-center pt-2 border-top small text-success fw-semibold">
+            <span><i class="bi bi-capsule me-1"></i> View Pharmacy Catalog</span>
+            <i class="bi bi-arrow-right"></i>
+          </div>
+        </a>
+      </div>
+
+      <!-- 3. Diagnostics & Lab Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <a routerLink="/lab" class="card border-0 rounded-4 shadow-sm p-3 h-100 text-decoration-none transition-hover border-start border-info border-4 bg-white">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="d-flex align-items-center gap-3">
+              <div class="stat-icon bg-info-subtle text-info">
+                <i class="bi bi-flask-fill fs-4"></i>
+              </div>
+              <div>
+                <div class="text-muted small fw-semibold">Diagnostics & Lab</div>
+                <h5 class="fw-bold text-dark mb-0">Pathology Hub</h5>
+              </div>
+            </div>
+            <span class="badge bg-info-subtle text-info rounded-pill px-2 py-1 small">Testing</span>
+          </div>
+          <p class="small text-muted mb-2">Specimen collection pipeline, biochemical profiles, and verified reports.</p>
+          <div class="d-flex justify-content-between align-items-center pt-2 border-top small text-info fw-semibold">
+            <span><i class="bi bi-clipboard-pulse me-1"></i> Order & Review Tests</span>
+            <i class="bi bi-arrow-right"></i>
+          </div>
+        </a>
+      </div>
+
+      <!-- 4. OPD Queue Screen Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <a routerLink="/queue-display" class="card border-0 rounded-4 shadow-sm p-3 h-100 text-decoration-none transition-hover border-start border-warning border-4 bg-white">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="d-flex align-items-center gap-3">
+              <div class="stat-icon bg-warning-subtle text-warning-emphasis">
+                <i class="bi bi-display fs-4"></i>
+              </div>
+              <div>
+                <div class="text-muted small fw-semibold">Live OPD Queue</div>
+                <h5 class="fw-bold text-dark mb-0">Lobby TV Kiosk</h5>
+              </div>
+            </div>
+            <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-2 py-1 small">Audio Chime</span>
+          </div>
+          <p class="small text-muted mb-2">Doctor consulting rooms, token number callout with Web Audio chime sound.</p>
+          <div class="d-flex justify-content-between align-items-center pt-2 border-top small text-warning-emphasis fw-semibold">
+            <span><i class="bi bi-tv me-1"></i> Open Live Display</span>
+            <i class="bi bi-arrow-right"></i>
+          </div>
+        </a>
+      </div>
+
+      <!-- 5. Executive Analytics Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <a routerLink="/analytics" class="card border-0 rounded-4 shadow-sm p-3 h-100 text-decoration-none transition-hover border-start border-danger border-4 bg-white">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="d-flex align-items-center gap-3">
+              <div class="stat-icon bg-danger-subtle text-danger">
+                <i class="bi bi-graph-up-arrow fs-4"></i>
+              </div>
+              <div>
+                <div class="text-muted small fw-semibold">Executive Analytics</div>
+                <h5 class="fw-bold text-dark mb-0">Financial Intel</h5>
+              </div>
+            </div>
+            <span class="badge bg-danger-subtle text-danger rounded-pill px-2 py-1 small">KPI Insights</span>
+          </div>
+          <p class="small text-muted mb-2">6-Month revenue trends, doctor star ratings, and inpatient volume analysis.</p>
+          <div class="d-flex justify-content-between align-items-center pt-2 border-top small text-danger fw-semibold">
+            <span><i class="bi bi-bar-chart me-1"></i> View Analytics Dashboard</span>
+            <i class="bi bi-arrow-right"></i>
+          </div>
+        </a>
+      </div>
+
+      <!-- 6. Operations Command Hub Direct Card -->
+      <div class="col-12 col-md-6 col-xl-4">
+        <a routerLink="/operations" class="card border-0 rounded-4 shadow-sm p-3 h-100 text-decoration-none transition-hover border-start border-secondary border-4 bg-light">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="d-flex align-items-center gap-3">
+              <div class="stat-icon bg-secondary-subtle text-secondary">
+                <i class="bi bi-grid-fill fs-4"></i>
+              </div>
+              <div>
+                <div class="text-muted small fw-semibold">Central Command</div>
+                <h5 class="fw-bold text-dark mb-0">Operations Hub</h5>
+              </div>
+            </div>
+            <span class="badge bg-dark text-white rounded-pill px-2 py-1 small">All Modules</span>
+          </div>
+          <p class="small text-muted mb-2">Unified quick action drawer modals for bed admits, stock, labs, and telemed.</p>
+          <div class="d-flex justify-content-between align-items-center pt-2 border-top small text-secondary fw-semibold">
+            <span><i class="bi bi-gear-wide-connected me-1"></i> Launch Operations Hub</span>
+            <i class="bi bi-arrow-right"></i>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-time Data Panels Row -->
+  <div *ngIf="dashboard" class="row g-4">
+    <!-- Today's Appointments Queue Table -->
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 rounded-4 shadow-sm p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h5 class="fw-bold text-dark mb-1">
+              <i class="bi bi-calendar-day text-danger me-2"></i>Today's Appointment Queue
+            </h5>
+            <p class="text-muted small mb-0">Scheduled outpatient consultations for today.</p>
+          </div>
+          <a [routerLink]="['/appointments']" [queryParams]="{ filter: 'today' }" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+            View Today's Queue
+          </a>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Time</th>
+                <th>Patient</th>
+                <th>Doctor</th>
+                <th>Status</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="dashboard.todayAppointmentsList.length === 0">
+                <td colspan="5" class="text-center py-4 text-muted small">
+                  <i class="bi bi-calendar-check d-block fs-3 mb-1 text-secondary"></i>
+                  No appointments scheduled for today yet.
+                </td>
+              </tr>
+              <tr *ngFor="let appt of dashboard.todayAppointmentsList">
+                <td class="fw-bold text-dark">{{ appt.appointmentTime }}</td>
+                <td>
+                  <div class="fw-semibold">{{ appt.patientName }}</div>
+                  <small class="text-muted">{{ appt.patientPhone }}</small>
+                </td>
+                <td>
+                  <div>Dr. {{ appt.doctorName }}</div>
+                  <small class="text-muted">{{ appt.doctorSpecialization }}</small>
+                </td>
+                <td>
+                  <span class="badge rounded-pill px-2 py-1"
+                        [ngClass]="{
+                          'bg-success-subtle text-success': appt.status === 'CONFIRMED',
+                          'bg-warning-subtle text-warning': appt.status === 'BOOKED',
+                          'bg-info-subtle text-info': appt.status === 'COMPLETED',
+                          'bg-danger-subtle text-danger': appt.status === 'CANCELLED'
+                        }">
+                    {{ appt.status }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <a [routerLink]="['/appointments', appt.id]" class="btn btn-sm btn-outline-secondary rounded-pill px-2">
+                    Details
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Bills & Quick Actions -->
+    <div class="col-12 col-lg-4">
+      <div class="card border-0 rounded-4 shadow-sm p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold text-dark mb-0">
+            <i class="bi bi-cash-stack text-warning me-2"></i>Pending Bills
+          </h5>
+          <a [routerLink]="['/bills']" [queryParams]="{ status: 'PENDING' }" class="btn btn-outline-warning btn-sm rounded-pill px-3">
+            View Pending
+          </a>
+        </div>
+
+        <div *ngIf="dashboard.recentBills.length === 0" class="text-center py-4 text-muted small">
+          <i class="bi bi-check2-circle d-block fs-3 text-success mb-1"></i>
+          All bills are settled! No pending invoices.
+        </div>
+
+        <div class="d-flex flex-column gap-3">
+          <div *ngFor="let bill of dashboard.recentBills" class="p-3 rounded-4 bg-light border d-flex align-items-center justify-content-between">
+            <div>
+              <div class="fw-bold text-dark font-monospace small">{{ bill.billNumber }}</div>
+              <div class="text-muted small">{{ bill.patientName }}</div>
+              <span class="badge bg-warning-subtle text-warning rounded-pill small mt-1">{{ bill.paymentStatus }}</span>
+            </div>
+            <div class="text-end">
+              <div class="fw-bold text-success fs-6">${{ bill.totalAmount | number:'1.2-2' }}</div>
+              <a [routerLink]="['/bills', bill.id]" class="btn btn-sm btn-outline-primary rounded-pill mt-1 py-0 px-2 small">
+                Invoice
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Administrative Quick Links -->
+        <hr class="my-4">
+        <h6 class="fw-bold text-dark mb-2">Quick Navigation</h6>
+        <div class="d-flex flex-wrap gap-2">
+          <a routerLink="/patients" class="btn btn-outline-secondary btn-sm rounded-pill">
+            <i class="bi bi-people me-1"></i> Patients
+          </a>
+          <a routerLink="/doctors" class="btn btn-outline-secondary btn-sm rounded-pill">
+            <i class="bi bi-heart-pulse me-1"></i> Doctors
+          </a>
+          <a routerLink="/appointments" class="btn btn-outline-secondary btn-sm rounded-pill">
+            <i class="bi bi-calendar-event me-1"></i> Appointments
+          </a>
+          <a routerLink="/bills/new" class="btn btn-outline-success btn-sm rounded-pill">
+            <i class="bi bi-plus-circle me-1"></i> New Bill
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

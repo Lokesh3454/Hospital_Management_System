@@ -1,0 +1,211 @@
+<div class="container-fluid py-4">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2 class="h3 fw-bold mb-1">
+        <i class="bi bi-prescription2 text-success me-2"></i>Prescriptions & Medications
+      </h2>
+      <p class="text-muted mb-0">Digital Rx orders, dosage directions, and medical dispensary records</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a *ngIf="canCreate" routerLink="/prescriptions/new" class="btn btn-success shadow-sm rounded-pill px-4">
+        <i class="bi bi-plus-circle me-1"></i>Issue New Prescription
+      </a>
+    </div>
+  </div>
+
+  <!-- Role-Tailored Timeline Filter Tabs -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-3">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="d-flex flex-wrap gap-2">
+          <!-- All Prescriptions (Available for Doctor, Admin, Receptionist) -->
+          <button *ngIf="!isPatient" 
+                  type="button" 
+                  class="btn rounded-pill px-3 py-1 fw-semibold filter-tab-btn"
+                  [ngClass]="activeTimeline === 'all' ? 'btn-success text-white shadow-sm' : 'btn-light text-secondary border'"
+                  (click)="setTimelineFilter('all')">
+            <i class="bi bi-grid me-1"></i> All Hospital Prescriptions
+          </button>
+
+          <!-- My Issued Prescriptions (Doctor Specific) -->
+          <button *ngIf="isDoctor" 
+                  type="button" 
+                  class="btn rounded-pill px-3 py-1 fw-semibold filter-tab-btn"
+                  [ngClass]="activeTimeline === 'my' ? 'btn-success text-white shadow-sm' : 'btn-light text-secondary border'"
+                  (click)="setTimelineFilter('my')">
+            <i class="bi bi-person-badge me-1"></i> My Issued Prescriptions
+          </button>
+
+          <!-- My Prescriptions (Patient Specific) -->
+          <button *ngIf="isPatient" 
+                  type="button" 
+                  class="btn rounded-pill px-3 py-1 fw-semibold filter-tab-btn"
+                  [ngClass]="activeTimeline === 'my' ? 'btn-success text-white shadow-sm' : 'btn-light text-secondary border'"
+                  (click)="setTimelineFilter('my')">
+            <i class="bi bi-capsule me-1"></i> My Prescriptions
+          </button>
+
+          <!-- Today's Prescriptions -->
+          <button type="button" 
+                  class="btn rounded-pill px-3 py-1 fw-semibold filter-tab-btn"
+                  [ngClass]="activeTimeline === 'today' ? 'btn-success text-white shadow-sm' : 'btn-light text-secondary border'"
+                  (click)="setTimelineFilter('today')">
+            <i class="bi bi-calendar-event me-1"></i> Today's Prescriptions
+          </button>
+        </div>
+
+        <div class="text-muted small fw-semibold">
+          <i class="bi bi-info-circle me-1"></i>
+          <span *ngIf="isDoctor && activeTimeline === 'my'">Viewing prescriptions authorized by your physician profile</span>
+          <span *ngIf="isPatient">Viewing your active and past prescribed regimens</span>
+          <span *ngIf="!isDoctor && !isPatient">Showing verified formulary records</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Filter Notification Bar -->
+  <div *ngIf="isAnyFilterActive" class="d-flex align-items-center justify-content-between p-3 mb-4 bg-success-subtle border border-success-subtle rounded-4 text-success shadow-sm">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <i class="bi bi-funnel-fill fs-5"></i>
+      <span class="small fw-semibold">Active Filter: <strong>{{ activeFilterTitle }}</strong></span>
+      <span class="badge bg-success rounded-pill px-3 py-1">{{ prescriptions.length }} Prescription{{ prescriptions.length === 1 ? '' : 's' }} Matched</span>
+    </div>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-6">
+          <label class="form-label small text-muted mb-1">Search Prescriptions</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" class="form-control border-start-0" placeholder="Search medicine, patient, doctor, instructions..."
+                   [(ngModel)]="searchTerm" (keyup.enter)="applySearch()">
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted mb-1">Filter by Date</label>
+          <input type="date" class="form-control" [(ngModel)]="selectedDate" (change)="applySearch()">
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button class="btn btn-success flex-fill rounded-pill" (click)="applySearch()">
+            <i class="bi bi-filter me-1"></i>Apply Filter
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Alert -->
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show shadow-sm rounded-4" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+  </div>
+
+  <!-- Prescriptions Table Card -->
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+      <h5 class="mb-0 fw-bold">
+        Prescription Directory
+        <span class="badge bg-light text-dark border ms-2 rounded-pill px-3 py-1">{{ prescriptions.length }} Records</span>
+      </h5>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3" style="width: 80px;">#Rx ID</th>
+            <th>Patient Details</th>
+            <th>Prescribing Physician</th>
+            <th>Medications Summary</th>
+            <th>Items</th>
+            <th>Date Issued</th>
+            <th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Loading State -->
+          <tr *ngIf="isLoading">
+            <td colspan="7" class="text-center py-5">
+              <div class="spinner-border text-success" role="status"></div>
+              <p class="text-muted mt-2 mb-0">Fetching prescription records...</p>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="!isLoading && prescriptions.length === 0">
+            <td colspan="7" class="text-center py-5">
+              <div class="text-muted mb-3">
+                <i class="bi bi-capsule display-4 text-secondary opacity-50"></i>
+              </div>
+              <h5 class="fw-bold text-dark">No Prescriptions Found</h5>
+              <p class="text-muted small mb-3">
+                {{ isAnyFilterActive ? 'No prescriptions match the active filter criteria.' : 'No prescriptions have been recorded in the system.' }}
+              </p>
+              <div class="d-flex justify-content-center gap-2">
+                <a *ngIf="canCreate" routerLink="/prescriptions/new" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm">
+                  <i class="bi bi-plus-circle me-1"></i> Issue New Prescription
+                </a>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Data Rows -->
+          <tr *ngFor="let rx of prescriptions">
+            <td class="ps-3 fw-bold text-success">
+              #Rx-{{ rx.id }}
+            </td>
+            <td>
+              <div class="fw-bold text-dark">{{ rx.patientName }}</div>
+              <small class="text-muted">{{ rx.patientPhone || rx.patientEmail || 'Patient #' + rx.patientId }}</small>
+            </td>
+            <td>
+              <div class="fw-semibold text-dark">{{ rx.doctorName }}</div>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">
+                {{ rx.doctorSpecialization || 'Physician' }}
+              </span>
+            </td>
+            <td>
+              <!-- Items Preview -->
+              <div *ngIf="rx.items && rx.items.length > 0" class="d-flex flex-wrap gap-1">
+                <span *ngFor="let item of rx.items.slice(0, 2)" class="badge bg-light text-dark border rounded-pill px-2 py-1">
+                  {{ item.medicineName }} ({{ item.dosage }})
+                </span>
+                <span *ngIf="rx.items.length > 2" class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1">
+                  +{{ rx.items.length - 2 }} more
+                </span>
+              </div>
+              <div *ngIf="!rx.items || rx.items.length === 0" class="small text-muted text-truncate" style="max-width: 260px;">
+                {{ rx.notes || 'Medication regimen recorded' }}
+              </div>
+            </td>
+            <td>
+              <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">
+                {{ rx.items ? rx.items.length : 1 }} Medicine{{ ((rx.items ? rx.items.length : 1) > 1) ? 's' : '' }}
+              </span>
+            </td>
+            <td>
+              <div class="fw-semibold text-dark">
+                <i class="bi bi-calendar3 me-1 text-success"></i>{{ rx.prescriptionDate }}
+              </div>
+            </td>
+            <td class="text-end pe-3">
+              <div class="btn-group btn-group-sm">
+                <a [routerLink]="['/prescriptions', rx.id]" class="btn btn-outline-secondary rounded-pill px-2 me-1" title="View & Print Rx Slip">
+                  <i class="bi bi-eye me-1"></i> View
+                </a>
+                <a *ngIf="canCreate" [routerLink]="['/prescriptions', rx.id, 'edit']" class="btn btn-outline-success rounded-pill px-2" title="Edit Prescription">
+                  <i class="bi bi-pencil me-1"></i> Edit
+                </a>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

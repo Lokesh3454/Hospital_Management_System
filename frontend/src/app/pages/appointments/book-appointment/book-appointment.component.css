@@ -1,0 +1,48 @@
+.avatar-doc {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slots-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+}
+
+.slot-button {
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.active-slot {
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.35);
+  transform: translateY(-1px);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.slot-booked-tag {
+  font-size: 0.65rem;
+  padding: 2px 4px;
+}

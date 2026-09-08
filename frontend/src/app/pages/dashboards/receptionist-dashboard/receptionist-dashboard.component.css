@@ -1,0 +1,64 @@
+.bg-gradient-rec {
+  background: linear-gradient(135deg, #78350f 0%, #b45309 50%, #d97706 100%);
+}
+
+.action-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-card {
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  cursor: pointer;
+  border: 2px solid transparent !important;
+  text-decoration: none;
+  display: block;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12) !important;
+  border-color: #0284c7 !important;
+}
+
+.stat-card:active {
+  transform: translateY(-2px);
+}
+
+.stat-card .go-hint {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.stat-card:hover .go-hint {
+  opacity: 1;
+}
+
+.stat-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hover-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.hover-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08) !important;
+}

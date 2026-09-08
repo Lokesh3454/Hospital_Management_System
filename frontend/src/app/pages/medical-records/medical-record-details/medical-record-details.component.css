@@ -1,0 +1,11 @@
+@media print {
+  .btn, nav, .breadcrumb {
+    display: none !important;
+  }
+}
+
+.timeline-item:last-child {
+  border-bottom: none !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}

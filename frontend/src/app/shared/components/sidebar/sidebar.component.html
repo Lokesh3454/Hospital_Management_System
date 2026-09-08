@@ -1,0 +1,227 @@
+<aside class="sidebar d-flex flex-column">
+  <div class="sidebar-header p-3 border-bottom d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-2">
+      <div class="brand-icon-mobile d-lg-none">
+        <i class="bi bi-hospital"></i>
+      </div>
+      <div>
+        <small class="text-uppercase text-muted fw-bold tracking-wider">Navigation</small>
+        <div class="d-lg-none fw-bold text-dark" style="font-size: 0.95rem;">MedPulse HMS</div>
+      </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge bg-light text-secondary border px-2 py-1" style="font-size: 0.65rem;">HMS Pro</span>
+      <button type="button" class="btn-close d-lg-none" aria-label="Close menu" (click)="sidebarService.close()"></button>
+    </div>
+  </div>
+
+  <div class="sidebar-menu p-3 flex-grow-1">
+    <!-- Admin Links -->
+    <ul class="nav nav-pills flex-column gap-1" *ngIf="isAdmin">
+      <li class="sidebar-section-title px-3 pb-1">
+        <small class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem;">Core Administration</small>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-speedometer2 me-2 text-primary"></i> Admin Overview
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/doctors" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-heart-pulse me-2 text-danger"></i> Doctor Management
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/patients" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-people me-2 text-success"></i> Patient Directory
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/appointments" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-calendar-check me-2 text-info"></i> Appointments
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/medical-records" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-file-earmark-medical me-2 text-warning"></i> Medical Records
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/prescriptions" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-prescription2 me-2 text-purple"></i> Prescriptions
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/bills" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-receipt-cutoff me-2 text-success"></i> Billing & Revenue
+        </a>
+      </li>
+
+      <li class="sidebar-section-title px-3 pt-3 pb-1">
+        <small class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem;">Hospital Operations</small>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link op-hub-highlight" routerLink="/operations" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-grid-fill me-2 text-danger"></i>
+          <span>Operations Command Hub</span>
+          <span class="badge bg-danger rounded-pill ms-auto" style="font-size: 0.65rem;">12 Wings</span>
+        </a>
+      </li>
+    </ul>
+
+    <!-- Doctor Links -->
+    <ul class="nav nav-pills flex-column gap-1" *ngIf="isDoctor">
+      <li class="sidebar-section-title px-3 pb-1">
+        <small class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem;">Clinical Practice</small>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/doctor" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-heart-pulse me-2 text-danger"></i> Doctor Workspace
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/appointments" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-calendar-week me-2 text-primary"></i> Doctor Schedule
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/patients" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-folder-fill me-2 text-success"></i> Patient Records
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/medical-records" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-file-earmark-medical me-2 text-warning"></i> Medical Records
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/prescriptions" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-prescription2 me-2 text-purple"></i> Issue Prescriptions
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/doctors" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-person-lines-fill me-2 text-info"></i> Medical Directory
+        </a>
+      </li>
+
+      <li class="sidebar-section-title px-3 pt-3 pb-1">
+        <small class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem;">Hospital Operations</small>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link op-hub-highlight" routerLink="/operations" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-grid-fill me-2 text-danger"></i>
+          <span>Operations Command Hub</span>
+          <span class="badge bg-danger rounded-pill ms-auto" style="font-size: 0.65rem;">Hub</span>
+        </a>
+      </li>
+    </ul>
+
+    <!-- Receptionist Links -->
+    <ul class="nav nav-pills flex-column gap-1" *ngIf="isReceptionist">
+      <li class="sidebar-section-title px-3 pb-1">
+        <small class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem;">Front Desk Operations</small>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/receptionist" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-clipboard2-pulse me-2 text-primary"></i> Front Desk Dashboard
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/appointments" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-calendar2-week me-2 text-info"></i> Appointments
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/appointments/book" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-calendar-plus me-2 text-success"></i> Schedule Visit
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/patients" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-person-plus-fill me-2 text-warning"></i> Patient Directory
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/bills" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-credit-card me-2 text-success"></i> Billing Counter
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/medical-records" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-file-earmark-medical me-2 text-secondary"></i> Medical Records
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/prescriptions" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-prescription2 me-2 text-purple"></i> Prescriptions
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/doctors" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-calendar-event me-2 text-danger"></i> Doctor Schedules
+        </a>
+      </li>
+
+      <li class="sidebar-section-title px-3 pt-3 pb-1">
+        <small class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem;">Hospital Operations</small>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link op-hub-highlight" routerLink="/operations" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-grid-fill me-2 text-danger"></i>
+          <span>Operations Command Hub</span>
+          <span class="badge bg-danger rounded-pill ms-auto" style="font-size: 0.65rem;">Hub</span>
+        </a>
+      </li>
+    </ul>
+
+    <!-- Patient Links (Unified Professional Healthcare Theme) -->
+    <ul class="nav nav-pills flex-column gap-1" *ngIf="isPatient">
+      <li class="sidebar-section-title px-3 pb-1">
+        <small class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem;">Patient Portal</small>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/patient" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-person-badge me-2 text-primary"></i> My Portal Overview
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/appointments/book" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-calendar-plus me-2 text-success"></i> Book Appointment
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/appointments" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-calendar-check me-2 text-info"></i> My Appointments
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/medical-records" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-file-earmark-medical me-2 text-warning"></i> My Medical Records
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/prescriptions" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-capsule me-2 text-purple"></i> My Prescriptions
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/doctors" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-hospital me-2 text-danger"></i> Find a Doctor
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" routerLink="/bills" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+          <i class="bi bi-credit-card-2-front me-2 text-success"></i> My Bills & Invoices
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <div class="sidebar-footer p-3 border-top bg-light text-muted small">
+    <div class="d-flex align-items-center justify-content-between">
+      <span><i class="bi bi-shield-check text-success me-1"></i> MedPulse HMS</span>
+      <span class="badge bg-success-subtle text-success">Online</span>
+    </div>
+  </div>
+</aside>

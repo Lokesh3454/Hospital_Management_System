@@ -1,0 +1,8 @@
+.medicine-item-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.medicine-item-card:hover {
+  border-color: #198754 !important;
+  background-color: #f8fcf9 !important;
+}

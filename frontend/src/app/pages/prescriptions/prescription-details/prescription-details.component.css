@@ -1,0 +1,33 @@
+.rx-hospital-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rx-symbol {
+  font-size: 2.2rem;
+  font-family: 'Times New Roman', serif;
+  line-height: 1;
+}
+
+.signature-line {
+  min-height: 32px;
+  font-size: 1.1rem;
+}
+
+@media print {
+  body {
+    background-color: #fff !important;
+  }
+  .print-hide, .btn, nav, .breadcrumb {
+    display: none !important;
+  }
+  .rx-slip-card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}

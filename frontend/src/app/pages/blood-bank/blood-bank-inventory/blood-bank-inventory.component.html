@@ -1,0 +1,321 @@
+<div class="container-fluid py-4 blood-bank-wrapper">
+  <!-- Breadcrumbs & Header -->
+  <div class="row align-items-center mb-4">
+    <div class="col-md-7">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a [routerLink]="authService.getDashboardRouteForUser()" class="text-decoration-none">Dashboard</a></li>
+          <li class="breadcrumb-item"><a routerLink="/operations" class="text-decoration-none">Operations Hub</a></li>
+          <li class="breadcrumb-item active text-danger fw-semibold" aria-current="page">Blood Bank & Component Inventory</li>
+        </ol>
+      </nav>
+      <h2 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+        <i class="bi bi-droplet-half text-danger fs-2"></i>
+        Transfusion Services & Blood Bank
+      </h2>
+      <p class="text-muted small mb-0">Real-time inventory of 8 blood groups across Whole Blood, PRBC, Platelets, and FFP with crossmatch reservations</p>
+    </div>
+
+    <div class="col-md-5 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end gap-2">
+      <button class="btn btn-outline-danger d-flex align-items-center gap-2" (click)="loadData()">
+        <i class="bi bi-arrow-clockwise" [class.spin]="isLoading"></i> Refresh Stocks
+      </button>
+      <button class="btn btn-danger d-flex align-items-center gap-2 shadow-sm" (click)="openAddModal()">
+        <i class="bi bi-plus-circle-fill"></i> Add Blood Lot
+      </button>
+    </div>
+  </div>
+
+  <!-- Telemetry Counter Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100 border-start border-danger border-4">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-danger small fw-semibold text-uppercase">Total Available Units</div>
+            <h3 class="fw-bold mb-0 mt-1 text-danger">{{ totalAvailableUnits }}</h3>
+            <span class="text-muted x-small">Ready for Cross-match</span>
+          </div>
+          <div class="stat-icon-wrapper bg-danger-subtle text-danger rounded-circle p-3">
+            <i class="bi bi-droplet-fill fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-primary small fw-semibold text-uppercase">Reserved for Surgery</div>
+            <h3 class="fw-bold mb-0 mt-1 text-primary">{{ totalReservedUnits }}</h3>
+            <span class="text-muted x-small">Locked in Cryo-Vault</span>
+          </div>
+          <div class="stat-icon-wrapper bg-primary-subtle text-primary rounded-circle p-3">
+            <i class="bi bi-lock-fill fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100 border-start border-warning border-4">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-warning-emphasis small fw-semibold text-uppercase">Critical Shortages</div>
+            <h3 class="fw-bold mb-0 mt-1 text-warning-emphasis">{{ criticalShortagesCount }}</h3>
+            <span class="text-muted x-small">&lt; 5 units available</span>
+          </div>
+          <div class="stat-icon-wrapper bg-warning-subtle text-warning-emphasis rounded-circle p-3">
+            <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-semibold text-uppercase">Total Batches</div>
+            <h3 class="fw-bold mb-0 mt-1 text-dark">{{ inventory.length }}</h3>
+            <span class="text-muted x-small">Across 8 Blood Groups</span>
+          </div>
+          <div class="stat-icon-wrapper bg-secondary-subtle text-secondary rounded-circle p-3">
+            <i class="bi bi-box-seam fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div *ngIf="successMessage" class="alert alert-success border-0 rounded-3 shadow-sm alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i> {{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = null"></button>
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-danger border-0 rounded-3 shadow-sm alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+  </div>
+
+  <!-- Critical Shortage Warning Banner -->
+  <div *ngIf="criticalShortagesCount > 0" class="alert alert-danger border-0 rounded-4 shadow-sm mb-4 d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-3">
+      <div class="p-2 bg-danger rounded-circle text-white">
+        <i class="bi bi-shield-fill-exclamation fs-4"></i>
+      </div>
+      <div>
+        <h6 class="fw-bold mb-0">Critical Stock Warning</h6>
+        <p class="mb-0 small">
+          {{ criticalShortagesCount }} component batch(es) have fallen below minimum critical threshold (5 units). Donor drive mobilization suggested.
+        </p>
+      </div>
+    </div>
+    <span class="badge bg-danger text-white px-3 py-2 rounded-pill">Urgent Restock</span>
+  </div>
+
+  <!-- Filter Toolbar -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white p-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-7">
+        <label class="form-label small text-muted fw-semibold mb-1">Filter by Blood Group (ABO/Rh)</label>
+        <div class="d-flex flex-wrap gap-1">
+          <button type="button" class="btn btn-sm" [ngClass]="selectedGroupFilter === 'ALL' ? 'btn-danger' : 'btn-outline-secondary'" (click)="selectedGroupFilter = 'ALL'">All Groups</button>
+          <button *ngFor="let bg of bloodGroups" type="button" class="btn btn-sm" [ngClass]="selectedGroupFilter === bg ? 'btn-danger' : 'btn-outline-secondary'" (click)="selectedGroupFilter = bg">{{ bg }}</button>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small text-muted fw-semibold mb-1">Component Type</label>
+        <select class="form-select form-select-sm" [(ngModel)]="selectedComponentFilter">
+          <option value="ALL">All Components</option>
+          <option value="WHOLE_BLOOD">Whole Blood</option>
+          <option value="PRBC">Packed Red Blood Cells (PRBC)</option>
+          <option value="PLATELETS">Platelets Concentrate</option>
+          <option value="FFP">Fresh Frozen Plasma (FFP)</option>
+        </select>
+      </div>
+
+      <div class="col-md-2 text-md-end mt-4">
+        <span class="text-muted small"><strong>{{ filteredInventory.length }}</strong> inventory batches</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-danger" role="status">
+      <span class="visually-hidden">Loading Blood Bank...</span>
+    </div>
+    <p class="text-muted mt-2">Checking cryo-vault inventory levels...</p>
+  </div>
+
+  <!-- Inventory Table -->
+  <div *ngIf="!isLoading && filteredInventory.length > 0" class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light text-uppercase small text-muted">
+          <tr>
+            <th class="ps-4">Blood Group</th>
+            <th>Component Type</th>
+            <th>Stock Status</th>
+            <th>Available Units</th>
+            <th>Reserved for OT</th>
+            <th>Vault Location & Expiry</th>
+            <th class="text-end pe-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of filteredInventory" [class.table-danger-light]="item.unitsAvailable < 5" [class.table-warning-light]="item.unitsAvailable >= 5 && item.unitsAvailable < 10">
+            <td class="ps-4">
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-6 fw-bold px-3 py-1">
+                <i class="bi bi-droplet-fill me-1"></i> {{ item.bloodGroup }}
+              </span>
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border">{{ item.componentType }}</span>
+            </td>
+            <td>
+              <div *ngIf="item.unitsAvailable < 5" class="text-danger small fw-bold">
+                <i class="bi bi-exclamation-circle-fill me-1"></i> CRITICAL LOW
+              </div>
+              <div *ngIf="item.unitsAvailable >= 5 && item.unitsAvailable < 10" class="text-warning-emphasis small fw-semibold">
+                <i class="bi bi-dash-circle-fill me-1"></i> Low Stock
+              </div>
+              <div *ngIf="item.unitsAvailable >= 10" class="text-success small fw-semibold">
+                <i class="bi bi-check-circle-fill me-1"></i> Adequate Stock
+              </div>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold fs-5" [ngClass]="item.unitsAvailable < 5 ? 'text-danger' : 'text-dark'">
+                  {{ item.unitsAvailable }}
+                </span>
+                <span class="text-muted small">units</span>
+              </div>
+            </td>
+            <td>
+              <span class="badge bg-secondary-subtle text-secondary px-2 py-1">
+                <i class="bi bi-lock me-1"></i> {{ item.reservedUnits || 0 }} units
+              </span>
+            </td>
+            <td>
+              <div class="small text-dark">{{ item.storageLocation || 'Cryo Bay A' }}</div>
+              <div class="text-muted x-small">Expires: {{ item.expiryDate }}</div>
+            </td>
+            <td class="text-end pe-4">
+              <div class="btn-group">
+                <button class="btn btn-sm btn-outline-primary" [disabled]="item.unitsAvailable <= 0" (click)="openReserveModal(item)">
+                  <i class="bi bi-lock-fill me-1"></i> Reserve
+                </button>
+                <button class="btn btn-sm btn-outline-success" (click)="openRestockModal(item)">
+                  <i class="bi bi-plus-lg me-1"></i> Restock
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Reserve Units Modal -->
+  <div *ngIf="showReserveModal && selectedItemForAction" class="modal-backdrop-custom d-flex align-items-center justify-content-center p-3">
+    <div class="card border-0 rounded-4 shadow-lg p-4 bg-white modal-dialog-custom">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark">
+          Reserve Blood: {{ selectedItemForAction.bloodGroup }} ({{ selectedItemForAction.componentType }})
+        </h5>
+        <button type="button" class="btn-close" (click)="closeReserveModal()"></button>
+      </div>
+
+      <p class="text-muted small">
+        Currently Available: <strong>{{ selectedItemForAction.unitsAvailable }} units</strong>.
+        Reserved units are earmarked for scheduled surgeries or critical trauma cases.
+      </p>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Units to Reserve</label>
+        <input type="number" class="form-control" [(ngModel)]="reserveUnitsCount" [max]="selectedItemForAction.unitsAvailable" min="1">
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="button" class="btn btn-light" (click)="closeReserveModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="confirmReserve()">Confirm Reservation</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Restock Units Modal -->
+  <div *ngIf="showRestockModal && selectedItemForAction" class="modal-backdrop-custom d-flex align-items-center justify-content-center p-3">
+    <div class="card border-0 rounded-4 shadow-lg p-4 bg-white modal-dialog-custom">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark">
+          Restock Blood Units: {{ selectedItemForAction.bloodGroup }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeRestockModal()"></button>
+      </div>
+
+      <p class="text-muted small">Record fresh units collected from voluntary blood drive or certified center intake.</p>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Units Received</label>
+        <input type="number" class="form-control" [(ngModel)]="restockUnitsCount" min="1" max="100">
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="button" class="btn btn-light" (click)="closeRestockModal()">Cancel</button>
+        <button type="button" class="btn btn-success" (click)="confirmRestock()">Restock Inventory</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add New Lot Modal -->
+  <div *ngIf="showAddModal" class="modal-backdrop-custom d-flex align-items-center justify-content-center p-3">
+    <div class="card border-0 rounded-4 shadow-lg p-4 bg-white modal-dialog-custom">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+          <i class="bi bi-droplet-fill text-danger"></i> Register New Blood Inventory Lot
+        </h5>
+        <button type="button" class="btn-close" (click)="closeAddModal()"></button>
+      </div>
+
+      <form (ngSubmit)="saveInventory()">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Blood Group *</label>
+            <select class="form-select" [(ngModel)]="newInventory.bloodGroup" name="bloodGroup">
+              <option *ngFor="let bg of bloodGroups" [value]="bg">{{ bg }}</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Component Type *</label>
+            <select class="form-select" [(ngModel)]="newInventory.componentType" name="componentType">
+              <option *ngFor="let ct of componentTypes" [value]="ct">{{ ct }}</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Initial Units *</label>
+            <input type="number" class="form-control" [(ngModel)]="newInventory.unitsAvailable" name="unitsAvailable" min="1" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Expiry Date *</label>
+            <input type="date" class="form-control" [(ngModel)]="newInventory.expiryDate" name="expiryDate" required>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Storage Vault Location</label>
+            <input type="text" class="form-control" [(ngModel)]="newInventory.storageLocation" name="storageLocation" placeholder="e.g. Cryo Vault 2 - Shelf B">
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4 pt-2 border-top">
+          <button type="button" class="btn btn-light" (click)="closeAddModal()">Cancel</button>
+          <button type="submit" class="btn btn-danger">Save Inventory Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

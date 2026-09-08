@@ -1,0 +1,213 @@
+<div class="print-actions d-print-none mb-4 d-flex justify-content-between align-items-center">
+  <a [routerLink]="['/bills', billId]" class="btn btn-outline-secondary rounded-pill">
+    <i class="bi bi-arrow-left me-1"></i> Back to Invoice Details
+  </a>
+  <div class="d-flex gap-2">
+    <button (click)="printInvoice()" class="btn btn-primary rounded-pill px-4 shadow-sm">
+      <i class="bi bi-printer me-2"></i> Print / Save as PDF
+    </button>
+  </div>
+</div>
+
+<div *ngIf="isLoading" class="text-center py-5 d-print-none">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+</div>
+
+<div *ngIf="errorMessage" class="alert alert-danger d-print-none">
+  {{ errorMessage }}
+</div>
+
+<div *ngIf="bill && !isLoading" class="invoice-sheet bg-white p-5 rounded-4 shadow-sm border mx-auto">
+  <!-- Invoice Header -->
+  <div class="letterhead pb-4 border-bottom mb-4 d-flex justify-content-between align-items-start">
+    <div class="d-flex align-items-center gap-3">
+      <div class="hospital-logo-badge bg-primary text-white rounded-3 d-flex align-items-center justify-content-center">
+        <i class="bi bi-hospital fs-1"></i>
+      </div>
+      <div>
+        <h2 class="h3 fw-bold text-primary mb-0">CITY GENERAL HOSPITAL</h2>
+        <p class="text-muted small mb-0">Hospital Tax Invoice | Inpatient & Outpatient Billing Department</p>
+        <p class="text-secondary small mb-0">GSTIN: 29AAAAA0000A1Z5 | PAN: AAAAA0000A | Reg: HOSP-9921-TAX</p>
+        <p class="text-secondary small mb-0">100 Healthcare Boulevard | Phone: +1 (800) 555-0199</p>
+      </div>
+    </div>
+    <div class="text-end">
+      <h3 class="h4 fw-bold text-dark mb-1">TAX INVOICE</h3>
+      <span class="badge bg-light text-dark border px-3 py-2 rounded-pill font-monospace">
+        {{ bill.billNumber || 'BILL-' + bill.id }}
+      </span>
+      <div class="small text-muted mt-2">
+        Date: <strong class="text-dark">{{ bill.billingDate | date:'mediumDate' }}</strong>
+      </div>
+      <div class="mt-2">
+        <span class="badge px-3 py-1 rounded-pill" [ngClass]="bill.paymentStatus === 'PAID' ? 'bg-success text-white' : 'bg-warning text-dark'">
+          <i class="bi me-1" [ngClass]="bill.paymentStatus === 'PAID' ? 'bi-check-circle-fill' : 'bi-clock-fill'"></i>
+          {{ bill.paymentStatus }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Billing Addresses -->
+  <div class="row g-4 p-3 bg-light rounded-3 mb-4">
+    <div class="col-md-6 border-end">
+      <span class="text-uppercase text-muted fw-bold small">Billed To</span>
+      <h5 class="fw-bold text-dark mt-1 mb-0">{{ bill.patientName || 'Patient' }}</h5>
+      <div class="small text-muted mt-1">
+        <div>Patient ID: <strong class="text-dark">PT-{{ bill.patientId }}</strong></div>
+        <div *ngIf="bill.patientPhone">Phone: <strong class="text-dark">{{ bill.patientPhone }}</strong></div>
+        <div *ngIf="bill.patientEmail">Email: <span class="text-dark">{{ bill.patientEmail }}</span></div>
+      </div>
+    </div>
+    <div class="col-md-6 ps-md-4">
+      <span class="text-uppercase text-muted fw-bold small">Attending Consultant & Department</span>
+      <h5 class="fw-bold text-dark mt-1 mb-0">{{ bill.doctorName || 'General Clinical Service' }}</h5>
+      <div class="small text-muted mt-1">
+        <div>Department: <strong class="text-dark">{{ bill.doctorSpecialization || 'Outpatient Clinic' }}</strong></div>
+        <div *ngIf="bill.appointmentId">Visit Reference: <strong class="text-dark">APPT-#{{ bill.appointmentId }}</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Itemized Invoice Table -->
+  <div class="table-responsive mb-4">
+    <table class="table table-bordered align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 5%">#</th>
+          <th style="width: 50%">Description of Medical Service / Item</th>
+          <th class="text-center" style="width: 15%">Category</th>
+          <th class="text-end" style="width: 30%">Amount ($)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="text-center">1</td>
+          <td>
+            <div class="fw-bold text-dark">Professional Consultation & Examination Fee</div>
+            <div class="text-muted small">Specialist consultation and clinical diagnostic assessment</div>
+          </td>
+          <td class="text-center"><span class="badge bg-secondary-subtle text-dark">Consultation</span></td>
+          <td class="text-end fw-semibold">${{ (bill.consultationFee || 0) | number:'1.2-2' }}</td>
+        </tr>
+        <tr *ngIf="bill.medicineCharges && bill.medicineCharges > 0">
+          <td class="text-center">2</td>
+          <td>
+            <div class="fw-bold text-dark">Pharmacy & Medication Dispensing</div>
+            <div class="text-muted small">Prescribed pharmaceutical drugs and consumables</div>
+          </td>
+          <td class="text-center"><span class="badge bg-secondary-subtle text-dark">Pharmacy</span></td>
+          <td class="text-end fw-semibold">${{ bill.medicineCharges | number:'1.2-2' }}</td>
+        </tr>
+        <tr *ngIf="bill.testCharges && bill.testCharges > 0">
+          <td class="text-center">3</td>
+          <td>
+            <div class="fw-bold text-dark">Diagnostic Laboratory & Radiology Investigations</div>
+            <div class="text-muted small">Pathology tests, blood profile and clinical imaging</div>
+          </td>
+          <td class="text-center"><span class="badge bg-secondary-subtle text-dark">Lab & Diagnostics</span></td>
+          <td class="text-end fw-semibold">${{ bill.testCharges | number:'1.2-2' }}</td>
+        </tr>
+        <tr *ngIf="bill.otherCharges && bill.otherCharges > 0">
+          <td class="text-center">4</td>
+          <td>
+            <div class="fw-bold text-dark">Inpatient / Nursing Care & Facility Utility Charges</div>
+            <div class="text-muted small">Hospital bed occupancy, sanitation and nursing support</div>
+          </td>
+          <td class="text-center"><span class="badge bg-secondary-subtle text-dark">Facility</span></td>
+          <td class="text-end fw-semibold">${{ bill.otherCharges | number:'1.2-2' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Invoice Calculation & QR Section -->
+  <div class="row g-4 mb-4">
+    <!-- QR Code / Payment Mode -->
+    <div class="col-md-6">
+      <div class="p-3 border rounded-3 bg-light text-center h-100 d-flex flex-column justify-content-center align-items-center">
+        <div *ngIf="bill.paymentStatus === 'PAID'">
+          <i class="bi bi-check-circle-fill text-success fs-1"></i>
+          <h6 class="fw-bold text-success mt-2 mb-1">PAYMENT RECEIVED IN FULL</h6>
+          <p class="small text-muted mb-0">Payment Method: <strong>{{ bill.paymentMethod || 'Online Transfer' }}</strong></p>
+          <p class="small text-muted font-monospace">Txn Ref: #TXN-{{ bill.id }}9481B</p>
+        </div>
+        <div *ngIf="bill.paymentStatus !== 'PAID'">
+          <!-- Simulated UPI Payment QR -->
+          <div class="qr-box bg-white p-2 border rounded-2 shadow-sm d-inline-block">
+            <svg width="120" height="120" viewBox="0 0 100 100">
+              <rect width="100" height="100" fill="#ffffff" />
+              <!-- QR outer boxes -->
+              <rect x="5" y="5" width="30" height="30" fill="#1e293b" />
+              <rect x="10" y="10" width="20" height="20" fill="#ffffff" />
+              <rect x="15" y="15" width="10" height="10" fill="#1e293b" />
+
+              <rect x="65" y="5" width="30" height="30" fill="#1e293b" />
+              <rect x="70" y="10" width="20" height="20" fill="#ffffff" />
+              <rect x="75" y="15" width="10" height="10" fill="#1e293b" />
+
+              <rect x="5" y="65" width="30" height="30" fill="#1e293b" />
+              <rect x="10" y="70" width="20" height="20" fill="#ffffff" />
+              <rect x="15" y="75" width="10" height="10" fill="#1e293b" />
+
+              <!-- Data bits -->
+              <rect x="42" y="10" width="8" height="8" fill="#1e293b" />
+              <rect x="42" y="25" width="15" height="6" fill="#1e293b" />
+              <rect x="10" y="45" width="12" height="10" fill="#1e293b" />
+              <rect x="30" y="42" width="10" height="16" fill="#1e293b" />
+              <rect x="45" y="45" width="18" height="10" fill="#1e293b" />
+              <rect x="70" y="45" width="20" height="8" fill="#1e293b" />
+              <rect x="45" y="65" width="10" height="25" fill="#1e293b" />
+              <rect x="65" y="65" width="25" height="10" fill="#1e293b" />
+              <rect x="65" y="80" width="12" height="10" fill="#1e293b" />
+            </svg>
+          </div>
+          <h6 class="fw-bold text-dark mt-2 mb-0">Scan & Pay via Mobile UPI / Card</h6>
+          <p class="small text-muted mb-0">Instant hospital billing gateway</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calculations Summary -->
+    <div class="col-md-6">
+      <div class="p-3 border rounded-3 bg-light">
+        <div class="d-flex justify-content-between py-1 small">
+          <span class="text-muted">Subtotal (Net Medical Services):</span>
+          <span class="fw-semibold text-dark">${{ ((bill.consultationFee || 0) + (bill.medicineCharges || 0) + (bill.testCharges || 0) + (bill.otherCharges || 0)) | number:'1.2-2' }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-1 small">
+          <span class="text-muted">Healthcare GST / Tax (5% included):</span>
+          <span class="fw-semibold text-dark">${{ ((bill.totalAmount || 0) * 0.05) | number:'1.2-2' }}</span>
+        </div>
+        <hr class="my-2" />
+        <div class="d-flex justify-content-between py-2">
+          <span class="h6 fw-bold text-dark mb-0">Total Amount Due:</span>
+          <span class="h5 fw-bold text-primary mb-0">${{ (bill.totalAmount || 0) | number:'1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div *ngIf="bill.notes" class="mb-4 p-3 bg-light rounded-3 border small">
+    <strong class="text-dark">Billing Remarks:</strong>
+    <p class="text-secondary mb-0 mt-1">{{ bill.notes }}</p>
+  </div>
+
+  <!-- Sign off -->
+  <div class="pt-4 border-top d-flex justify-content-between align-items-end mt-5">
+    <div class="text-muted small">
+      <div>Payment Terms: Immediate / Insurance Settlement within 15 Days.</div>
+      <div>Thank you for entrusting City General Hospital with your care.</div>
+    </div>
+    <div class="text-center" style="width: 200px;">
+      <div class="border-bottom border-dark pb-1 mb-2 font-monospace text-muted fw-bold">
+        CITY GEN FINANCE
+      </div>
+      <div class="fw-bold text-dark small">Authorized Accounts Officer</div>
+      <div class="text-muted small" style="font-size: 0.75rem;">Accounts & Billing Division</div>
+    </div>
+  </div>
+</div>

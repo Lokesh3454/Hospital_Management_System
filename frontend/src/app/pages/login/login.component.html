@@ -1,0 +1,161 @@
+<div class="auth-hero-wrapper py-5">
+  <!-- Dynamic Background Transition Slideshow with Ken Burns & Vivid Colors -->
+  <div class="bg-slideshow-container" aria-hidden="true">
+    <div class="bg-slide slide-1"></div>
+    <div class="bg-slide slide-2"></div>
+    <div class="bg-slide slide-3"></div>
+    <div class="bg-overlay"></div>
+    <div class="aurora-mesh"></div>
+  </div>
+
+  <!-- Ambient Floating Neon Aurora Light Orbs -->
+  <div class="ambient-glow-1" aria-hidden="true"></div>
+  <div class="ambient-glow-2" aria-hidden="true"></div>
+  <div class="ambient-glow-3" aria-hidden="true"></div>
+
+  <!-- Content Container -->
+  <div class="container position-relative z-index-content">
+    <!-- Hospital Network Pill -->
+    <div class="d-flex justify-content-center mb-3">
+      <div class="glass-pill text-white px-3 py-1 rounded-pill d-inline-flex align-items-center gap-2 shadow-sm">
+        <span class="live-dot"></span>
+        <span class="small fw-semibold tracking-wide">MedPulse Medical Center &bull; 24/7 Healthcare Portal</span>
+      </div>
+    </div>
+
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-8 col-lg-5">
+        <!-- Glowing Iridescent Multi-Color Frame -->
+        <div class="glowing-card-frame">
+          <div class="luxury-glass-card shadow-2xl">
+            <!-- Top Vivid Rainbow Accent Bar -->
+            <div class="card-accent-bar"></div>
+
+            <div class="luxury-card-header">
+              <div class="glowing-brand-icon">
+                <i class="bi bi-hospital fs-1"></i>
+              </div>
+              <h3 class="gradient-title mb-1">MedPulse Hospital</h3>
+              <div class="d-inline-flex align-items-center gap-2 mt-1 px-3 py-1 rounded-pill status-pill">
+                <span class="live-dot"></span>
+                <span class="small fw-semibold text-cyan-light">Clinical & Administrative Portal</span>
+              </div>
+            </div>
+
+            <div class="card-body p-4 p-md-5 pt-4">
+              <div class="text-center mb-4">
+                <h4 class="fw-bold text-white mb-1">Account Sign In</h4>
+                <p class="text-muted-light small mb-0">Enter your credentials to access your dashboard</p>
+              </div>
+
+              <!-- Alert messages -->
+              <div class="alert alert-danger bg-danger-glass text-white d-flex align-items-center mb-4 py-2 border-0" *ngIf="errorMessage">
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-danger-light"></i>
+                <span class="small">{{ errorMessage }}</span>
+              </div>
+
+              <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold text-label-light small">
+                    <i class="bi bi-person-badge me-1 text-cyan"></i> Username or Email
+                  </label>
+                  <div class="input-group glass-input-group">
+                    <span class="input-group-text glass-input-icon">
+                      <i class="bi bi-person"></i>
+                    </span>
+                    <input type="text" class="form-control glass-input" placeholder="e.g. admin or doctor_smith"
+                           formControlName="username"
+                           [class.is-invalid]="loginForm.get('username')?.touched && loginForm.get('username')?.invalid">
+                  </div>
+                  <div class="text-warning-light small mt-1" *ngIf="loginForm.get('username')?.touched && loginForm.get('username')?.invalid">
+                    <i class="bi bi-exclamation-circle me-1"></i> Username is required.
+                  </div>
+                </div>
+
+                <div class="mb-4">
+                  <label class="form-label fw-semibold text-label-light small">
+                    <i class="bi bi-shield-lock me-1 text-cyan"></i> Password
+                  </label>
+                  <div class="input-group glass-input-group">
+                    <span class="input-group-text glass-input-icon">
+                      <i class="bi bi-lock"></i>
+                    </span>
+                    <input type="password" class="form-control glass-input" placeholder="••••••••"
+                           formControlName="password"
+                           [class.is-invalid]="loginForm.get('password')?.touched && loginForm.get('password')?.invalid">
+                  </div>
+                  <div class="text-warning-light small mt-1" *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.invalid">
+                    <i class="bi bi-exclamation-circle me-1"></i> Password must be at least 4 characters.
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-vibrant-gradient w-100 py-3 fw-bold rounded-3 mb-3 shadow-lg" [disabled]="isLoading">
+                  <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+                  <span *ngIf="!isLoading"><i class="bi bi-box-arrow-in-right me-2"></i>Sign In to Dashboard</span>
+                </button>
+
+                <div class="text-center small text-light-muted mb-4">
+                  Don't have an account? 
+                  <a routerLink="/register" class="fw-bold text-cyan-accent text-decoration-none">
+                    Register as Patient <i class="bi bi-arrow-right-short"></i>
+                  </a>
+                </div>
+              </form>
+
+              <!-- Quick Demo Login Presets -->
+              <div class="border-top border-secondary border-opacity-25 pt-4">
+                <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
+                  <span class="badge-quick-tag text-uppercase fw-bold">
+                    <i class="bi bi-lightning-charge-fill text-warning"></i> Quick Demo Login
+                  </span>
+                </div>
+                <div class="row g-2">
+                  <div class="col-6">
+                    <button type="button" class="btn demo-pill-btn demo-pill-admin w-100"
+                            (click)="quickLogin('ADMIN')">
+                      <i class="bi bi-shield-lock-fill"></i> Admin
+                    </button>
+                  </div>
+                  <div class="col-6">
+                    <button type="button" class="btn demo-pill-btn demo-pill-doctor w-100"
+                            (click)="quickLogin('DOCTOR')">
+                      <i class="bi bi-heart-pulse-fill"></i> Doctor
+                    </button>
+                  </div>
+                  <div class="col-6">
+                    <button type="button" class="btn demo-pill-btn demo-pill-patient w-100"
+                            (click)="quickLogin('PATIENT')">
+                      <i class="bi bi-person-fill"></i> Patient
+                    </button>
+                  </div>
+                  <div class="col-6">
+                    <button type="button" class="btn demo-pill-btn demo-pill-receptionist w-100"
+                            (click)="quickLogin('RECEPTIONIST')">
+                      <i class="bi bi-clipboard2-pulse-fill"></i> Receptionist
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Carousel Scene Badges -->
+        <div class="d-flex justify-content-center gap-2 mt-4">
+          <span class="badge glass-pill text-white px-3 py-2 small d-inline-flex align-items-center">
+            <i class="bi bi-building-check me-1 text-cyan"></i> Modern Campus
+          </span>
+          <span class="badge glass-pill text-white px-3 py-2 small d-inline-flex align-items-center">
+            <i class="bi bi-hospital me-1 text-success"></i> Patient Atrium
+          </span>
+          <span class="badge glass-pill text-white px-3 py-2 small d-inline-flex align-items-center">
+            <i class="bi bi-clipboard-pulse me-1 text-warning"></i> Clinical Suites
+          </span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,294 @@
+<div class="container-fluid py-4">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2 class="h3 fw-bold mb-1">
+        <i class="bi bi-file-earmark-medical text-primary me-2"></i>Medical Records & Diagnostics
+      </h2>
+      <p class="text-muted mb-0">Patient clinical histories, lab reports, symptoms, and diagnoses</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <button *ngIf="isAdmin" class="btn btn-outline-danger" (click)="requestClearAllHistory()" title="Clear all history">
+        <i class="bi bi-trash3 me-1"></i>Clear History
+      </button>
+      <a *ngIf="canCreate" routerLink="/medical-records/new" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>New Medical Record
+      </a>
+    </div>
+  </div>
+
+  <!-- Active Filter Notification Bar -->
+  <div *ngIf="isAnyFilterActive" class="d-flex align-items-center justify-content-between p-2 px-3 mb-3 bg-primary-subtle border border-primary-subtle rounded-4 text-primary">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <i class="bi bi-funnel-fill fs-5"></i>
+      <span class="small fw-semibold">Active Filter: <strong>{{ activeFilterTitle }}</strong></span>
+      <span class="badge bg-primary rounded-pill">{{ records.length }} Records</span>
+    </div>
+  </div>
+
+  <!-- Search & Filter Card -->
+  <div class="card border-0 shadow-sm mb-4 rounded-4 p-3">
+    <div class="card-body p-2">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-3">
+          <label class="form-label small fw-bold text-secondary mb-1">
+            <i class="bi bi-search me-1"></i>Search Keyword
+          </label>
+          <input type="text" class="form-control rounded-3" placeholder="Diagnosis, symptoms, notes..."
+                 [(ngModel)]="searchTerm" (keyup.enter)="loadRecords()">
+        </div>
+        <div class="col-6 col-md-3" *ngIf="!isPatient">
+          <label class="form-label small fw-bold text-secondary mb-1">
+            <i class="bi bi-person me-1"></i>Patient
+          </label>
+          <select class="form-select rounded-3" [(ngModel)]="selectedPatientId" (change)="loadRecords()">
+            <option value="">All Patients</option>
+            <option *ngFor="let p of patients" [value]="p.id">
+              {{ p.name }}
+            </option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2" *ngIf="!isDoctor">
+          <label class="form-label small fw-bold text-secondary mb-1">
+            <i class="bi bi-award me-1"></i>Doctor
+          </label>
+          <select class="form-select rounded-3" [(ngModel)]="selectedDoctorId" (change)="loadRecords()">
+            <option value="">All Doctors</option>
+            <option *ngFor="let doc of doctors" [value]="doc.doctorId">
+              Dr. {{ doc.name }}
+            </option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small fw-bold text-secondary mb-1">
+            <i class="bi bi-calendar3 me-1"></i>Record Date
+          </label>
+          <input type="date" class="form-control rounded-3" [(ngModel)]="selectedDate" (change)="loadRecords()">
+        </div>
+        <div class="col-6 col-md-2 d-flex gap-2">
+          <button class="btn btn-primary rounded-3 flex-fill fw-semibold" (click)="loadRecords()">
+            <i class="bi bi-funnel-fill me-1"></i> Filter
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert -->
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+  </div>
+
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i>{{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = null"></button>
+  </div>
+
+  <!-- ON-PAGE CONFIRMATION: DELETE INDIVIDUAL RECORD (NO BROWSER POPUPS) -->
+  <div *ngIf="recordToDelete" class="card border-2 border-danger shadow-sm mb-4 rounded-4 bg-danger bg-opacity-10 animate__animated animate__fadeIn">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-danger text-white rounded-circle p-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 52px; height: 52px;">
+            <i class="bi bi-trash3-fill fs-4"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold mb-1 text-danger">Are you sure you want to delete this record?</h5>
+            <div class="text-dark">
+              Record <strong>#{{ recordToDelete.id }}</strong> &mdash; <strong>{{ recordToDelete.diagnosis }}</strong>
+              for patient <strong class="text-primary">{{ recordToDelete.patientName }}</strong>
+              (Doctor: <em>{{ recordToDelete.doctorName }}</em>).
+            </div>
+            <small class="text-muted d-block mt-1">
+              <i class="bi bi-info-circle me-1"></i>This medical record will be permanently deleted from the database.
+            </small>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-danger px-4 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm"
+                  (click)="confirmDelete()" [disabled]="isDeleting">
+            <span *ngIf="isDeleting" class="spinner-border spinner-border-sm"></span>
+            <i *ngIf="!isDeleting" class="bi bi-check-circle-fill"></i>
+            Yes, Delete Record
+          </button>
+          <button class="btn btn-outline-secondary px-3 py-2 fw-semibold"
+                  (click)="cancelDelete()" [disabled]="isDeleting">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ON-PAGE CONFIRMATION: RESEED DIVERSE SAMPLE RECORDS (NO BROWSER POPUPS) -->
+  <div *ngIf="isConfirmingReseed" class="card border-2 border-info shadow-sm mb-4 rounded-4 bg-info bg-opacity-10 animate__animated animate__fadeIn">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-info text-white rounded-circle p-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 52px; height: 52px;">
+            <i class="bi bi-database-fill-gear fs-4"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold mb-1 text-dark">Are you sure you want to load diverse sample records?</h5>
+            <div class="text-dark">
+              This will refresh medical records with <strong>8 diverse sample clinical records</strong> with different patient names, specialists, and diseases.
+            </div>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary px-4 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm"
+                  (click)="confirmReseedSampleData()" [disabled]="isLoading">
+            <span *ngIf="isLoading" class="spinner-border spinner-border-sm"></span>
+            <i *ngIf="!isLoading" class="bi bi-check-circle-fill"></i>
+            Yes, Load Sample Data
+          </button>
+          <button class="btn btn-outline-secondary px-3 py-2 fw-semibold"
+                  (click)="cancelReseed()" [disabled]="isLoading">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ON-PAGE CONFIRMATION: CLEAR ALL HISTORY (NO BROWSER POPUPS) -->
+  <div *ngIf="isConfirmingClearAll" class="card border-2 border-danger shadow-sm mb-4 rounded-4 bg-danger bg-opacity-10 animate__animated animate__fadeIn">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-danger text-white rounded-circle p-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 52px; height: 52px;">
+            <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold mb-1 text-danger">Are you sure you want to clear ALL medical records history?</h5>
+            <div class="text-dark">
+              This will permanently delete all <strong>{{ records.length }}</strong> clinical diagnostic entries from the system.
+            </div>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-danger px-4 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm"
+                  (click)="confirmClearAllHistory()" [disabled]="isDeleting">
+            <span *ngIf="isDeleting" class="spinner-border spinner-border-sm"></span>
+            <i *ngIf="!isDeleting" class="bi bi-trash3-fill"></i>
+            Yes, Clear All History
+          </button>
+          <button class="btn btn-outline-secondary px-3 py-2 fw-semibold"
+                  (click)="cancelClearAllHistory()" [disabled]="isDeleting">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Records Table Card -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+      <h5 class="mb-0 fw-bold">
+        Clinical Diagnostic History
+        <span class="badge bg-light text-dark border ms-2">{{ records.length }} Total</span>
+      </h5>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3" style="width: 70px;">#ID</th>
+            <th>Patient</th>
+            <th>Attending Doctor</th>
+            <th>Diagnosis</th>
+            <th>Symptoms & Clinical Findings</th>
+            <th>Record Date</th>
+            <th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Loading State -->
+          <tr *ngIf="isLoading">
+            <td colspan="7" class="text-center py-5">
+              <div class="spinner-border text-primary" role="status"></div>
+              <p class="text-muted mt-2 mb-0">Loading medical records...</p>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="!isLoading && records.length === 0">
+            <td colspan="7" class="text-center py-5">
+              <div class="text-muted mb-3">
+                <i class="bi bi-clipboard2-x display-4 text-secondary"></i>
+              </div>
+              <h6 class="fw-bold">No medical records found</h6>
+              <p class="text-muted small mb-3">Adjust your search criteria or create a new record.</p>
+              <div class="d-flex justify-content-center gap-2">
+                <a *ngIf="canCreate" routerLink="/medical-records/new" class="btn btn-sm btn-primary">
+                  <i class="bi bi-plus me-1"></i>Create Record
+                </a>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Data Rows -->
+          <tr *ngFor="let rec of records" [class.table-danger]="recordToDelete?.id === rec.id" [class.border-start]="recordToDelete?.id === rec.id" [class.border-danger]="recordToDelete?.id === rec.id" [class.border-3]="recordToDelete?.id === rec.id">
+            <td class="ps-3 fw-bold text-muted">#{{ rec.id }}</td>
+            <td>
+              <div class="fw-semibold text-dark">{{ rec.patientName }}</div>
+              <span class="badge bg-light text-dark border">{{ rec.patientGender || 'Patient' }}</span>
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" *ngIf="rec.patientBloodGroup">
+                {{ rec.patientBloodGroup }}
+              </span>
+            </td>
+            <td>
+              <div class="fw-semibold">{{ rec.doctorName }}</div>
+              <small class="text-muted">{{ rec.doctorSpecialization }}</small>
+            </td>
+            <td>
+              <span class="fw-bold text-primary">{{ rec.diagnosis }}</span>
+              <small *ngIf="rec.appointmentId" class="badge bg-secondary-subtle text-secondary border d-block mt-1" style="width: fit-content;">
+                Appt #{{ rec.appointmentId }}
+              </small>
+            </td>
+            <td>
+              <div class="text-truncate" style="max-width: 250px;" [title]="rec.symptoms || 'None recorded'">
+                {{ rec.symptoms || 'None recorded' }}
+              </div>
+              <small *ngIf="rec.treatment" class="text-muted d-block text-truncate" style="max-width: 250px;" [title]="rec.treatment">
+                <i class="bi bi-bandaid me-1"></i>{{ rec.treatment }}
+              </small>
+            </td>
+            <td>
+              <div class="fw-semibold"><i class="bi bi-calendar3 me-1 text-primary"></i>{{ rec.recordDate }}</div>
+            </td>
+            <td class="text-end pe-3">
+              <!-- Inline confirmation if this row is selected for delete -->
+              <div *ngIf="recordToDelete?.id === rec.id" class="d-inline-flex align-items-center gap-1">
+                <span class="text-danger fw-bold small me-1">Delete?</span>
+                <button class="btn btn-danger btn-sm px-2 py-1" (click)="confirmDelete()" [disabled]="isDeleting">
+                  <i class="bi bi-check-lg"></i> Yes
+                </button>
+                <button class="btn btn-secondary btn-sm px-2 py-1" (click)="cancelDelete()" [disabled]="isDeleting">
+                  Cancel
+                </button>
+              </div>
+
+              <!-- Standard actions when not deleting this row -->
+              <div *ngIf="recordToDelete?.id !== rec.id" class="btn-group btn-group-sm">
+                <a [routerLink]="['/medical-records', rec.id]" class="btn btn-outline-secondary" title="View Full Record & History">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a *ngIf="canCreate" [routerLink]="['/medical-records', rec.id, 'edit']" class="btn btn-outline-primary" title="Edit Record">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <button *ngIf="canCreate" class="btn btn-outline-danger" (click)="requestDelete(rec)" title="Delete Record">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

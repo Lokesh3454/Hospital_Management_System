@@ -1,0 +1,156 @@
+<div class="telemedicine-suite bg-dark text-white min-vh-100 d-flex flex-column">
+  <!-- Top Navigation & Session Info -->
+  <div class="suite-header p-3 bg-black bg-opacity-50 border-bottom border-secondary d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center gap-3">
+      <a (click)="endCall()" class="btn btn-outline-light rounded-circle btn-sm" style="cursor: pointer;">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-danger pulse-dot">REC</span>
+          <h5 class="mb-0 fw-bold text-white">Telemedicine Consultation Suite</h5>
+        </div>
+        <div class="small text-secondary">
+          Session #APPT-{{ appointmentId }} &bull;
+          Doctor: <strong>{{ appointment?.doctorName || 'Consultant' }}</strong> &bull;
+          Patient: <strong>{{ appointment?.patientName || 'Patient' }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Duration Timer & Encryption Badge -->
+    <div class="d-flex align-items-center gap-3">
+      <span class="badge bg-secondary-subtle text-dark px-3 py-2 rounded-pill font-monospace">
+        <i class="bi bi-clock-history me-1 text-danger"></i> {{ formattedDuration }}
+      </span>
+      <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill small d-none d-md-inline">
+        <i class="bi bi-shield-lock-fill me-1"></i> End-to-End Encrypted
+      </span>
+    </div>
+  </div>
+
+  <!-- Suite Main Work Area: Split Screen (Video Feeds on Left, Clinical Drawer on Right) -->
+  <div class="suite-body flex-grow-1 d-flex flex-column flex-lg-row overflow-hidden">
+    <!-- Video Area -->
+    <div class="video-stage flex-grow-1 p-3 p-md-4 d-flex flex-column justify-content-between position-relative">
+      <!-- Remote Participant Main Display -->
+      <div class="remote-video-container rounded-4 overflow-hidden position-relative flex-grow-1 d-flex align-items-center justify-content-center bg-black">
+        <!-- Simulation of Remote Doctor / Patient Feed -->
+        <div class="text-center p-4">
+          <div class="remote-avatar rounded-circle bg-primary bg-opacity-25 p-4 mx-auto mb-3 border border-primary border-2 d-inline-block">
+            <i class="bi bi-person-video fs-1 text-primary"></i>
+          </div>
+          <h4 class="fw-bold text-white mb-1">{{ appointment?.doctorName || 'Attending Physician' }}</h4>
+          <span class="badge bg-success px-3 py-1 rounded-pill small">
+            <i class="bi bi-broadcast me-1"></i> Connected &bull; 1080p HD
+          </span>
+          <div class="text-secondary small mt-2">
+            Audio Stream Active &bull; Low Latency (24ms)
+          </div>
+        </div>
+
+        <!-- PiP: Local Participant Video Preview -->
+        <div class="local-pip position-absolute bottom-0 end-0 m-3 rounded-3 overflow-hidden shadow-lg border border-secondary" style="width: 200px; height: 140px; background: #111;">
+          <video #localVideo autoplay playsinline muted class="w-100 h-100 object-fit-cover" [class.d-none]="!cameraPermitted || isVideoOff"></video>
+          <div *ngIf="!cameraPermitted || isVideoOff" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-center p-2 text-muted">
+            <i class="bi bi-camera-video-off fs-3 mb-1"></i>
+            <span style="font-size: 0.65rem;">Camera Disabled</span>
+          </div>
+          <div class="position-absolute bottom-0 start-0 m-1">
+            <span class="badge bg-black bg-opacity-75 small font-monospace">You</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- In-Call Floating Control Dock -->
+      <div class="control-dock mx-auto my-3 d-flex align-items-center gap-3 p-2 bg-black bg-opacity-75 rounded-pill border border-secondary shadow-lg">
+        <!-- Audio Mute Button -->
+        <button class="btn rounded-circle control-btn"
+                [ngClass]="isAudioMuted ? 'btn-danger' : 'btn-outline-light'"
+                (click)="toggleAudio()"
+                [title]="isAudioMuted ? 'Unmute Mic' : 'Mute Mic'">
+          <i class="bi" [ngClass]="isAudioMuted ? 'bi-mic-mute-fill' : 'bi-mic-fill'"></i>
+        </button>
+
+        <!-- Video On/Off Button -->
+        <button class="btn rounded-circle control-btn"
+                [ngClass]="isVideoOff ? 'btn-danger' : 'btn-outline-light'"
+                (click)="toggleVideo()"
+                [title]="isVideoOff ? 'Turn Video On' : 'Turn Video Off'">
+          <i class="bi" [ngClass]="isVideoOff ? 'bi-camera-video-off-fill' : 'bi-camera-video-fill'"></i>
+        </button>
+
+        <!-- Screen Share Button -->
+        <button class="btn rounded-circle control-btn"
+                [ngClass]="isScreenSharing ? 'btn-primary' : 'btn-outline-light'"
+                (click)="toggleScreenShare()"
+                title="Share Screen">
+          <i class="bi bi-display"></i>
+        </button>
+
+        <!-- End Call Button -->
+        <button class="btn btn-danger rounded-pill px-4 fw-bold" (click)="endCall()">
+          <i class="bi bi-telephone-x-fill me-2"></i> End Call
+        </button>
+      </div>
+    </div>
+
+    <!-- Side Clinical Drawer -->
+    <div class="clinical-drawer bg-black bg-opacity-75 border-start border-secondary p-3 d-flex flex-column" style="width: 380px;">
+      <!-- Patient Summary Card -->
+      <div class="card bg-secondary bg-opacity-25 border-0 rounded-4 p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h6 class="fw-bold text-white mb-0">Patient Clinical File</h6>
+          <span class="badge bg-info-subtle text-info font-monospace">PT-{{ appointment?.patientId }}</span>
+        </div>
+        <div class="fw-bold text-white">{{ appointment?.patientName }}</div>
+        <div class="small text-secondary">
+          Gender: {{ patient?.gender || 'N/A' }} &bull; Blood: {{ patient?.bloodGroup || 'N/A' }}
+        </div>
+
+        <!-- Allergy Alert in Telemedicine -->
+        <div *ngIf="patient?.allergies" class="mt-2 p-2 rounded-2 bg-danger-subtle text-danger small fw-bold">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i> Allergies: {{ patient?.allergies }}
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+          <a *ngIf="authService.hasRole('ROLE_DOCTOR')"
+             [routerLink]="['/prescriptions/new']"
+             [queryParams]="{ patientId: appointment?.patientId, appointmentId: appointmentId }"
+             target="_blank"
+             class="btn btn-sm btn-primary rounded-pill flex-fill">
+            <i class="bi bi-pencil-square me-1"></i> Issue Rx
+          </a>
+          <a routerLink="/lab" target="_blank" class="btn btn-sm btn-outline-light rounded-pill flex-fill">
+            <i class="bi bi-flask me-1"></i> Order Lab
+          </a>
+        </div>
+      </div>
+
+      <!-- In-Call Encrypted Chat -->
+      <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+        <h6 class="fw-bold text-secondary text-uppercase small mb-2">
+          <i class="bi bi-chat-left-dots-fill me-1"></i> Clinical In-Call Chat
+        </h6>
+
+        <div class="chat-log flex-grow-1 overflow-y-auto mb-2 pe-1">
+          <div *ngFor="let msg of chatMessages" class="mb-2" [ngClass]="msg.isMe ? 'text-end' : 'text-start'">
+            <div class="d-inline-block p-2 rounded-3 text-start small"
+                 [ngClass]="msg.isMe ? 'bg-primary text-white' : 'bg-secondary bg-opacity-50 text-white'">
+              <div class="fw-bold" style="font-size: 0.75rem;">{{ msg.sender }} &bull; <span class="text-white-50">{{ msg.time }}</span></div>
+              <div>{{ msg.text }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <input type="text" class="form-control bg-dark text-white border-secondary rounded-start-pill"
+                 [(ngModel)]="newMessageText" (keyup.enter)="sendMessage()" placeholder="Type clinical note...">
+          <button class="btn btn-primary rounded-end-pill px-3" (click)="sendMessage()">
+            <i class="bi bi-send-fill"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

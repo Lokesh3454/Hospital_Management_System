@@ -1,0 +1,5 @@
+/* Custom styles for bill-form */
+.input-group-text {
+  font-weight: bold;
+  color: #198754;
+}

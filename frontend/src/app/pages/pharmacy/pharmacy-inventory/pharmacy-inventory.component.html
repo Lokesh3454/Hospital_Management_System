@@ -1,0 +1,416 @@
+<div class="container-fluid py-4">
+  <!-- Top Bar -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1 small">
+          <li class="breadcrumb-item"><a [routerLink]="authService.getDashboardRouteForUser()">Dashboard</a></li>
+          <li class="breadcrumb-item"><a routerLink="/operations">Hospital Operations</a></li>
+          <li class="breadcrumb-item active">Pharmacy & Stock</li>
+        </ol>
+      </nav>
+      <h2 class="h3 fw-bold mb-0 text-dark">
+        <i class="bi bi-capsule text-primary me-2"></i>Pharmacy & Medicine Inventory
+      </h2>
+      <p class="text-muted small mb-0">Dispensing, stock level warnings, reorder alerts, and catalog control</p>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button *ngIf="authService.hasAnyRole(['ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST'])"
+              (click)="openAddModal()" class="btn btn-primary rounded-pill px-3 shadow-sm">
+        <i class="bi bi-plus-circle me-1"></i> Add Medicine
+      </button>
+      <button (click)="loadMedicines()" class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm mb-4">
+    <i class="bi bi-check-circle-fill me-2"></i>{{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = null"></button>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm mb-4">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+  </div>
+
+  <!-- KPI Counters (Interactive Clickable Filters) -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-4">
+      <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-start border-primary border-4 kpi-clickable"
+           [class.active-kpi]="!filterLowStockOnly"
+           (click)="filterByKpi('ALL')"
+           role="button"
+           title="Click to view all catalog formulations">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Catalog Formulations</div>
+            <div class="h3 fw-bold text-dark mb-0">{{ totalItems }}</div>
+            <span class="small text-muted">Registered medicines</span>
+          </div>
+          <i class="bi bi-grid fs-3 text-primary opacity-50"></i>
+        </div>
+        <div class="mt-2 text-primary small fw-semibold">
+          <i class="bi bi-funnel me-1"></i> {{ !filterLowStockOnly ? 'Showing All Catalog' : 'Click to Show All' }}
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-start border-danger border-4 kpi-clickable"
+           [class.active-kpi]="filterLowStockOnly"
+           (click)="filterByKpi('LOW_STOCK')"
+           role="button"
+           title="Click to filter low stock items">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Low Stock Warnings</div>
+            <div class="h3 fw-bold text-danger mb-0">{{ lowStockCount }}</div>
+            <span class="small text-muted">Below reorder threshold</span>
+          </div>
+          <i class="bi bi-exclamation-triangle fs-3 text-danger opacity-50"></i>
+        </div>
+        <div class="mt-2 text-danger small fw-semibold">
+          <i class="bi bi-funnel-fill me-1"></i> {{ filterLowStockOnly ? 'Filtered: Low Stock Only' : 'Click to Filter Low Stock' }}
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-start border-success border-4">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted small fw-semibold">Total Stock Units</div>
+            <div class="h3 fw-bold text-success mb-0">{{ totalUnits | number }}</div>
+            <span class="small text-muted">Total units on hospital shelves</span>
+          </div>
+          <i class="bi bi-boxes fs-3 text-success opacity-50"></i>
+        </div>
+        <div class="mt-2 text-success small fw-semibold">
+          <i class="bi bi-shield-check me-1"></i> Live Shelf Inventory
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div class="card border-0 rounded-4 shadow-sm p-3 bg-white mb-4">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-5">
+        <div class="input-group">
+          <span class="input-group-text bg-light border-0"><i class="bi bi-search text-muted"></i></span>
+          <input type="text" class="form-control bg-light border-0" [(ngModel)]="searchQuery" (keyup.enter)="onSearch()"
+                 placeholder="Search by brand name or generic chemical formula...">
+          <button class="btn btn-primary rounded-end" (click)="onSearch()">Search</button>
+        </div>
+      </div>
+
+      <div class="col-md-7 d-flex justify-content-md-end align-items-center gap-3 flex-wrap">
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" id="lowStockToggle" [(ngModel)]="filterLowStockOnly">
+          <label class="form-check-label small fw-semibold text-danger" for="lowStockToggle">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>Low Stock Only
+          </label>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <span class="small text-muted">Category:</span>
+          <select class="form-select form-select-sm rounded-pill" [(ngModel)]="selectedCategory" style="width: 160px;">
+            <option value="ALL">All Categories</option>
+            <option *ngFor="let cat of categories()" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div class="text-muted mt-2">Loading pharmacy catalog...</div>
+  </div>
+
+  <!-- Table of Medicines -->
+  <div *ngIf="!isLoading" class="card border-0 rounded-4 shadow-sm bg-white overflow-hidden">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 25%">Medicine Name & Formula</th>
+            <th style="width: 15%">Category & Form</th>
+            <th style="width: 15%">Strength & Batch</th>
+            <th class="text-end" style="width: 10%">Unit Price</th>
+            <th style="width: 20%">Stock Level</th>
+            <th class="text-end" style="width: 15%">Quick Dispense / Stock</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let med of filteredMedicines"
+              (click)="openMedicineDetails(med)"
+              style="cursor: pointer;"
+              class="med-interactive-row"
+              title="Click row for medicine clinical details & rapid stock actions">
+            <td>
+              <div class="fw-bold text-dark">{{ med.name }}</div>
+              <div class="text-muted small fst-italic">{{ med.genericName || '-' }}</div>
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border me-1">{{ med.dosageForm }}</span>
+              <span class="small text-muted">{{ med.category }}</span>
+            </td>
+            <td>
+              <div class="small fw-semibold text-dark">{{ med.strength || 'N/A' }}</div>
+              <div class="small text-muted font-monospace">{{ med.batchNumber || '-' }}</div>
+            </td>
+            <td class="text-end fw-bold text-dark">
+              ${{ med.unitPrice | number:'1.2-2' }}
+            </td>
+            <td>
+              <div class="d-flex justify-content-between small mb-1">
+                <span [ngClass]="med.stockQuantity <= med.reorderLevel ? 'text-danger fw-bold' : 'text-dark fw-semibold'">
+                  {{ med.stockQuantity }} units left
+                </span>
+                <span class="text-muted small">Min: {{ med.reorderLevel }}</span>
+              </div>
+              <div class="progress" style="height: 6px;">
+                <div class="progress-bar"
+                     [ngClass]="med.stockQuantity <= med.reorderLevel ? 'bg-danger' : 'bg-success'"
+                     [style.width.%]="(med.stockQuantity / (med.reorderLevel * 3)) * 100"></div>
+              </div>
+            </td>
+            <td class="text-end" (click)="$event.stopPropagation()">
+              <div class="btn-group btn-group-sm">
+                <!-- 1-Click Dispense -->
+                <button (click)="adjustStock(med, -1)"
+                        class="btn btn-outline-danger"
+                        [disabled]="med.stockQuantity <= 0"
+                        title="Dispense 1 unit">
+                  <i class="bi bi-dash"></i> 1
+                </button>
+                <!-- Quick Restock -->
+                <button (click)="adjustStock(med, 20)"
+                        class="btn btn-outline-success"
+                        title="Restock +20 units">
+                  <i class="bi bi-plus"></i> 20
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filteredMedicines.length === 0">
+            <td colspan="6" class="text-center py-5 text-muted">
+              <i class="bi bi-capsule-pill fs-1 d-block mb-2 text-secondary"></i>
+              No medicines found matching criteria.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add New Medicine (Zero reset buttons!) -->
+<div *ngIf="showAddModal" class="modal-backdrop fade show"></div>
+<div *ngIf="showAddModal" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold text-dark">
+          <i class="bi bi-plus-circle text-primary me-2"></i>Add Medicine to Inventory
+        </h5>
+        <button type="button" class="btn-close" (click)="closeAddModal()"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <form (ngSubmit)="saveMedicine()">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Brand / Product Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control rounded-3" [(ngModel)]="newMedicine.name" name="name" placeholder="e.g. Paracetamol 650mg" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Generic / Chemical Name</label>
+              <input type="text" class="form-control rounded-3" [(ngModel)]="newMedicine.genericName" name="genericName" placeholder="e.g. Acetaminophen">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Category</label>
+              <input type="text" class="form-control rounded-3" [(ngModel)]="newMedicine.category" name="category" placeholder="e.g. Analgesic, Antibiotic">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Dosage Form</label>
+              <select class="form-select rounded-3" [(ngModel)]="newMedicine.dosageForm" name="dosageForm">
+                <option value="TABLET">Tablet</option>
+                <option value="CAPSULE">Capsule</option>
+                <option value="SYRUP">Syrup</option>
+                <option value="INJECTION">Injection</option>
+                <option value="OINTMENT">Ointment</option>
+                <option value="DROPS">Drops</option>
+                <option value="INHALER">Inhaler</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Strength</label>
+              <input type="text" class="form-control rounded-3" [(ngModel)]="newMedicine.strength" name="strength" placeholder="e.g. 500mg, 10ml">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Manufacturer</label>
+              <input type="text" class="form-control rounded-3" [(ngModel)]="newMedicine.manufacturer" name="manufacturer" placeholder="e.g. Sun Pharma">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Batch Number</label>
+              <input type="text" class="form-control rounded-3" [(ngModel)]="newMedicine.batchNumber" name="batchNumber">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Unit Price ($) <span class="text-danger">*</span></label>
+              <input type="number" step="0.1" class="form-control rounded-3" [(ngModel)]="newMedicine.unitPrice" name="unitPrice" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Initial Stock Qty <span class="text-danger">*</span></label>
+              <input type="number" class="form-control rounded-3" [(ngModel)]="newMedicine.stockQuantity" name="stockQuantity" required>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-4 mt-3 border-top">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" (click)="closeAddModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" [disabled]="!newMedicine.name || isSubmitting">
+              <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
+              Add to Catalog
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================================================== -->
+<!-- INTERACTIVE MEDICINE DETAILS & STOCK ACTIONS MODAL   -->
+<!-- (Triggered upon clicking any medicine card/row)      -->
+<!-- ==================================================== -->
+<div *ngIf="showMedicineDetailsModal && selectedMedicineForDetails" class="modal-backdrop fade show"></div>
+<div *ngIf="showMedicineDetailsModal && selectedMedicineForDetails" class="modal fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+      <!-- Modal Header -->
+      <div class="modal-header bg-success text-white p-4">
+        <div>
+          <span class="badge bg-white text-success fw-bold mb-1">
+            {{ selectedMedicineForDetails.category }} &bull; {{ selectedMedicineForDetails.dosageForm }}
+          </span>
+          <h4 class="modal-title fw-bold mb-0">
+            <i class="bi bi-capsule me-2"></i>{{ selectedMedicineForDetails.name }}
+          </h4>
+          <small class="text-white-50">
+            Generic Formula: {{ selectedMedicineForDetails.genericName || 'Standard Formulation' }} &bull; Batch: {{ selectedMedicineForDetails.batchNumber || 'N/A' }}
+          </small>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeMedicineDetailsModal()"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body p-4">
+        <!-- Stock Level Alert Banner -->
+        <div class="p-3 rounded-4 mb-4 border d-flex justify-content-between align-items-center"
+             [ngClass]="selectedMedicineForDetails.stockQuantity <= selectedMedicineForDetails.reorderLevel ? 'bg-danger-subtle border-danger-subtle' : 'bg-success-subtle border-success-subtle'">
+          <div class="d-flex align-items-center gap-3">
+            <div class="p-3 rounded-circle"
+                 [ngClass]="selectedMedicineForDetails.stockQuantity <= selectedMedicineForDetails.reorderLevel ? 'bg-danger text-white' : 'bg-success text-white'">
+              <i class="bi fs-4" [ngClass]="selectedMedicineForDetails.stockQuantity <= selectedMedicineForDetails.reorderLevel ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill'"></i>
+            </div>
+            <div>
+              <div class="small fw-semibold text-uppercase text-muted">Current Shelf Stock</div>
+              <h4 class="fw-bold mb-0" [ngClass]="selectedMedicineForDetails.stockQuantity <= selectedMedicineForDetails.reorderLevel ? 'text-danger' : 'text-success'">
+                {{ selectedMedicineForDetails.stockQuantity }} Units Available
+              </h4>
+              <small class="text-muted">Reorder Threshold: {{ selectedMedicineForDetails.reorderLevel }} units</small>
+            </div>
+          </div>
+          <div class="text-end">
+            <span class="badge px-3 py-2 rounded-pill"
+                  [ngClass]="selectedMedicineForDetails.stockQuantity <= selectedMedicineForDetails.reorderLevel ? 'bg-danger text-white' : 'bg-success text-white'">
+              {{ selectedMedicineForDetails.stockQuantity <= selectedMedicineForDetails.reorderLevel ? 'CRITICAL LOW STOCK' : 'SAFE STOCK LEVEL' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Clinical & Pricing Metadata Grid -->
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <span class="text-muted small">Dosage Form</span>
+              <div class="fw-bold text-dark">{{ selectedMedicineForDetails.dosageForm }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <span class="text-muted small">Strength</span>
+              <div class="fw-bold text-dark">{{ selectedMedicineForDetails.strength || 'Standard' }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <span class="text-muted small">Unit Selling Price</span>
+              <div class="fw-bold text-success">${{ selectedMedicineForDetails.unitPrice | number:'1.2-2' }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 bg-light rounded-3 text-center border">
+              <span class="text-muted small">Manufacturer</span>
+              <div class="fw-bold text-dark text-truncate">{{ selectedMedicineForDetails.manufacturer || 'Approved Pharma' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rapid Stock Management Dock -->
+        <div class="p-4 bg-light rounded-4 border mb-3">
+          <h6 class="fw-bold text-dark mb-3">
+            <i class="bi bi-arrow-left-right text-success me-2"></i>Rapid Dispensing & Shelf Restock Controls
+          </h6>
+          <div class="row g-3 align-items-center">
+            <!-- Dispense Buttons -->
+            <div class="col-md-6">
+              <span class="small fw-semibold text-danger d-block mb-2">Dispense to Patient / Ward:</span>
+              <div class="btn-group w-100">
+                <button (click)="adjustStockInModal(-1)" class="btn btn-outline-danger" [disabled]="selectedMedicineForDetails.stockQuantity < 1 || isAdjustingInModal">
+                  <i class="bi bi-dash-circle me-1"></i> -1 Unit
+                </button>
+                <button (click)="adjustStockInModal(-5)" class="btn btn-outline-danger" [disabled]="selectedMedicineForDetails.stockQuantity < 5 || isAdjustingInModal">
+                  <i class="bi bi-dash-circle me-1"></i> -5 Units
+                </button>
+                <button (click)="adjustStockInModal(-10)" class="btn btn-outline-danger" [disabled]="selectedMedicineForDetails.stockQuantity < 10 || isAdjustingInModal">
+                  <i class="bi bi-dash-circle me-1"></i> -10 Units
+                </button>
+              </div>
+            </div>
+
+            <!-- Restock Buttons -->
+            <div class="col-md-6">
+              <span class="small fw-semibold text-success d-block mb-2">Restock Warehouse Batch:</span>
+              <div class="btn-group w-100">
+                <button (click)="adjustStockInModal(20)" class="btn btn-outline-success" [disabled]="isAdjustingInModal">
+                  <i class="bi bi-plus-circle me-1"></i> +20 Units
+                </button>
+                <button (click)="adjustStockInModal(50)" class="btn btn-outline-success" [disabled]="isAdjustingInModal">
+                  <i class="bi bi-plus-circle me-1"></i> +50 Units
+                </button>
+                <button (click)="adjustStockInModal(100)" class="btn btn-outline-success" [disabled]="isAdjustingInModal">
+                  <i class="bi bi-plus-circle me-1"></i> +100 Units
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-info rounded-3 small mb-0">
+          <i class="bi bi-shield-check me-1"></i> Stock transactions update in real-time across central inventory and doctor prescription form autocompletes.
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer bg-light p-3">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" (click)="closeMedicineDetailsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+

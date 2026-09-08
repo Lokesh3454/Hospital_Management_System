@@ -1,0 +1,143 @@
+<div class="container-fluid py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-9">
+      <!-- Breadcrumbs -->
+      <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+          <li class="breadcrumb-item"><a routerLink="/medical-records">Medical Records</a></li>
+          <li class="breadcrumb-item active">{{ isEditMode ? 'Edit Record #' + recordId : 'New Medical Record' }}</li>
+        </ol>
+      </nav>
+
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 class="h3 fw-bold mb-1">
+            <i class="bi bi-journal-medical text-primary me-2"></i>
+            {{ isEditMode ? 'Edit Medical Record #' + recordId : 'Create Clinical Medical Record' }}
+          </h2>
+          <p class="text-muted mb-0">Record patient examination findings, laboratory diagnostics, and therapeutic care plan</p>
+        </div>
+        <a routerLink="/medical-records" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+      </div>
+
+      <!-- Alerts -->
+      <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show shadow-sm">
+        <i class="bi bi-check-circle-fill me-2"></i>{{ successMessage }}
+      </div>
+      <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show shadow-sm">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
+        <button type="button" class="btn-close" (click)="errorMessage = null"></button>
+      </div>
+
+      <form [formGroup]="recordForm" (ngSubmit)="onSubmit()">
+        <!-- 1. Patient & Doctor Information -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-white py-3 border-0">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-person-lines-fill text-primary me-2"></i>Encounter Details</h5>
+          </div>
+          <div class="card-body pt-0">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Patient <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="patientId">
+                  <option value="" disabled>-- Select Patient --</option>
+                  <option *ngFor="let p of patients" [value]="p.patientId">
+                    {{ p.name }} &bull; {{ p.gender }} ({{ p.phone }})
+                  </option>
+                </select>
+                <div *ngIf="recordForm.get('patientId')?.touched && recordForm.get('patientId')?.invalid" class="text-danger small mt-1">
+                  Patient selection is required.
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Attending Doctor <span class="text-danger">*</span></label>
+                <select class="form-select" formControlName="doctorId">
+                  <option value="" disabled>-- Select Doctor --</option>
+                  <option *ngFor="let d of doctors" [value]="d.doctorId">
+                    Dr. {{ d.name }} &mdash; {{ d.specialization }}
+                  </option>
+                </select>
+                <div *ngIf="recordForm.get('doctorId')?.touched && recordForm.get('doctorId')?.invalid" class="text-danger small mt-1">
+                  Doctor selection is required.
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Linked Appointment # (Optional)</label>
+                <input type="number" class="form-control" formControlName="appointmentId" placeholder="e.g. 1">
+                <small class="text-muted">Enter appointment ID if record was created during a scheduled consultation.</small>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Date of Record <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" formControlName="recordDate">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Diagnostic & Clinical Findings -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-white py-3 border-0">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-activity text-danger me-2"></i>Clinical Assessment</h5>
+          </div>
+          <div class="card-body pt-0">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Primary Diagnosis <span class="text-danger">*</span></label>
+              <input type="text" class="form-control form-control-lg" formControlName="diagnosis"
+                     placeholder="e.g. Acute Bronchitis, Type 2 Diabetes, Essential Hypertension">
+              <div *ngIf="recordForm.get('diagnosis')?.touched && recordForm.get('diagnosis')?.invalid" class="text-danger small mt-1">
+                Diagnosis is required (min 3 characters).
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Reported Symptoms & Subjective Complaints</label>
+              <textarea class="form-control" rows="3" formControlName="symptoms"
+                        placeholder="e.g. High fever for 3 days, dry cough, shortness of breath on exertion, fatigue..."></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Diagnostic Test Results & Vital Signs</label>
+              <textarea class="form-control" rows="3" formControlName="testResults"
+                        placeholder="e.g. BP: 130/85 mmHg, Pulse: 78 bpm, SPO2: 98%, Fasting Blood Sugar: 110 mg/dL, Chest X-Ray: Clear..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Treatment & Clinical Notes -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-white py-3 border-0">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-bandaid text-success me-2"></i>Treatment Plan & Orders</h5>
+          </div>
+          <div class="card-body pt-0">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Therapeutic Care Plan / Treatment Protocol</label>
+              <textarea class="form-control" rows="3" formControlName="treatment"
+                        placeholder="e.g. Low sodium diet, nebulization twice daily, increased oral fluid intake, physical therapy..."></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Physician Notes & Prognosis</label>
+              <textarea class="form-control" rows="2" formControlName="notes"
+                        placeholder="e.g. Patient advised to return for follow-up evaluation in 2 weeks or if symptoms worsen..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submission Buttons -->
+        <div class="d-flex gap-2 justify-content-end mb-5">
+          <a routerLink="/medical-records" class="btn btn-outline-secondary px-4">Cancel</a>
+          <button type="submit" class="btn btn-primary px-4 fw-semibold" [disabled]="isSubmitting || recordForm.invalid">
+            <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
+            <i *ngIf="!isSubmitting" class="bi bi-check2-circle me-1"></i>
+            {{ isEditMode ? 'Update Record' : 'Save Medical Record' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

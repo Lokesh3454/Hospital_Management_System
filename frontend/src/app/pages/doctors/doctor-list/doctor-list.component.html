@@ -1,0 +1,199 @@
+<div class="container-fluid py-4 px-md-4">
+  <!-- Header Bar -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+      <h3 class="fw-bold text-dark mb-1">
+        <i class="bi bi-heart-pulse text-primary me-2"></i>Medical Specialists & Doctors
+      </h3>
+      <p class="text-muted small mb-0">Browse physician directory, qualifications, consultation fees, and availability schedules</p>
+    </div>
+    <div class="d-flex gap-2">
+      <div class="btn-group shadow-sm">
+        <button class="btn btn-outline-secondary" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'" title="Card View">
+          <i class="bi bi-grid-fill"></i>
+        </button>
+        <button class="btn btn-outline-secondary" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'" title="Table View">
+          <i class="bi bi-list-ul"></i>
+        </button>
+      </div>
+
+      <a *ngIf="isAdmin" routerLink="/doctors/new" class="btn btn-primary rounded-pill px-4 shadow-sm fw-semibold">
+        <i class="bi bi-person-plus-fill me-1"></i> Add Doctor
+      </a>
+    </div>
+  </div>
+
+  <!-- Notification Alerts -->
+  <div class="alert alert-success alert-dismissible fade show" *ngIf="successMessage">
+    <i class="bi bi-check-circle-fill me-2"></i> {{ successMessage }}
+  </div>
+  <div class="alert alert-danger alert-dismissible fade show" *ngIf="errorMessage">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ errorMessage }}
+  </div>
+
+  <!-- Search & Filter Card -->
+  <div class="card border-0 rounded-4 shadow-sm p-4 mb-4 bg-white">
+    <div class="row g-3">
+      <div class="col-12 col-md-3">
+        <label class="form-label small fw-bold text-secondary mb-1">
+          <i class="bi bi-person me-1"></i>Doctor Name
+        </label>
+        <input type="text" class="form-control rounded-3" placeholder="Search by name..."
+               [(ngModel)]="filterName" (keyup.enter)="onFilterChange()">
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label small fw-bold text-secondary mb-1">
+          <i class="bi bi-award me-1"></i>Specialization
+        </label>
+        <select class="form-select rounded-3" [(ngModel)]="selectedSpecialization" (change)="onFilterChange()">
+          <option value="">All Specializations</option>
+          <option *ngFor="let spec of specializations" [value]="spec">{{ spec }}</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2">
+        <label class="form-label small fw-bold text-secondary mb-1">
+          <i class="bi bi-briefcase me-1"></i>Min Experience
+        </label>
+        <select class="form-select rounded-3" [(ngModel)]="filterExperience" (change)="onFilterChange()">
+          <option [ngValue]="null">Any Years</option>
+          <option [ngValue]="1">1+ years</option>
+          <option [ngValue]="5">5+ years</option>
+          <option [ngValue]="10">10+ years</option>
+          <option [ngValue]="15">15+ years</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2">
+        <label class="form-label small fw-bold text-secondary mb-1">Status</label>
+        <select class="form-select rounded-3" [(ngModel)]="selectedStatus" (change)="onFilterChange()">
+          <option value="">All Statuses</option>
+          <option value="AVAILABLE">Available</option>
+          <option value="ON_LEAVE">On Leave</option>
+          <option value="BUSY">Busy</option>
+          <option value="INACTIVE">Inactive</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2 d-flex align-items-end gap-2">
+        <button class="btn btn-primary rounded-3 flex-grow-1 fw-semibold py-2" (click)="onFilterChange()">
+          <i class="bi bi-funnel-fill me-1"></i> Filter
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div class="text-muted mt-2">Loading doctors directory...</div>
+  </div>
+
+  <!-- GRID VIEW -->
+  <div *ngIf="!isLoading && viewMode === 'grid'" class="row g-4">
+    <div class="col-12 col-md-6 col-xl-4" *ngFor="let doc of doctors">
+      <div class="card border-0 rounded-4 shadow-sm h-100 doctor-card bg-white p-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div class="doctor-avatar shadow-sm">
+            <i class="bi bi-person-badge-fill text-primary fs-2"></i>
+          </div>
+          <span class="badge rounded-pill px-3 py-2" [ngClass]="getStatusBadgeClass(doc.status)">
+            {{ doc.status || 'AVAILABLE' }}
+          </span>
+        </div>
+
+        <h5 class="fw-bold text-dark mb-1">Dr. {{ doc.name }}</h5>
+        <div class="text-primary fw-semibold small mb-2">{{ doc.specialization }}</div>
+        <div class="text-muted small mb-3">{{ doc.qualification || 'MBBS, MD' }} &bull; {{ doc.experience || 0 }} yrs exp</div>
+
+        <div class="p-3 bg-light rounded-3 mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="text-muted small">Consultation Fee</span>
+            <span class="fw-bold text-success fs-5">${{ doc.consultationFee }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Department / Room</span>
+            <span class="small text-dark fw-semibold">{{ doc.department || 'Clinical' }} ({{ doc.roomNumber || 'R101' }})</span>
+          </div>
+        </div>
+
+        <div class="mt-auto d-flex gap-2">
+          <a [routerLink]="['/doctors', doc.doctorId]" class="btn btn-outline-primary btn-sm flex-grow-1 rounded-pill">
+            <i class="bi bi-person-lines-fill me-1"></i> Profile
+          </a>
+          <a [routerLink]="['/doctors', doc.doctorId, 'availability']" class="btn btn-outline-success btn-sm rounded-pill px-3" title="Manage Schedule">
+            <i class="bi bi-calendar-week me-1"></i> Schedule
+          </a>
+          <a *ngIf="isAdmin" [routerLink]="['/doctors', doc.doctorId, 'edit']" class="btn btn-outline-secondary btn-sm rounded-pill" title="Edit Doctor">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <button *ngIf="isAdmin" class="btn btn-outline-danger btn-sm rounded-pill" (click)="deleteDoctor(doc.doctorId!, doc.name)" title="Remove Doctor">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="col-12" *ngIf="doctors.length === 0">
+      <div class="card border-0 rounded-4 shadow-sm p-5 text-center text-muted bg-white">
+        <div class="display-6 mb-3"><i class="bi bi-search"></i></div>
+        <h5>No Doctors Found</h5>
+        <p class="small">Try adjusting your specialization filter or search query.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE VIEW -->
+  <div *ngIf="!isLoading && viewMode === 'table'" class="card border-0 rounded-4 shadow-sm overflow-hidden bg-white">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">ID</th>
+            <th>Doctor</th>
+            <th>Specialization</th>
+            <th>Fee</th>
+            <th>Experience</th>
+            <th>Status</th>
+            <th>Contact</th>
+            <th class="text-end pe-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let doc of doctors">
+            <td class="ps-4 fw-semibold text-muted">#{{ doc.doctorId }}</td>
+            <td>
+              <div class="fw-bold text-dark">Dr. {{ doc.name }}</div>
+              <small class="text-muted">{{ doc.qualification || 'MBBS' }}</small>
+            </td>
+            <td><span class="badge bg-primary-subtle text-primary">{{ doc.specialization }}</span></td>
+            <td class="fw-bold text-success">${{ doc.consultationFee }}</td>
+            <td>{{ doc.experience || 0 }} Years</td>
+            <td><span class="badge rounded-pill" [ngClass]="getStatusBadgeClass(doc.status)">{{ doc.status }}</span></td>
+            <td>
+              <div class="small">{{ doc.phone }}</div>
+              <small class="text-muted">{{ doc.email }}</small>
+            </td>
+            <td class="text-end pe-4">
+              <div class="btn-group btn-group-sm">
+                <a [routerLink]="['/doctors', doc.doctorId]" class="btn btn-outline-primary" title="View Profile">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a [routerLink]="['/doctors', doc.doctorId, 'availability']" class="btn btn-outline-success" title="Schedule">
+                  <i class="bi bi-calendar-check"></i>
+                </a>
+                <a *ngIf="isAdmin" [routerLink]="['/doctors', doc.doctorId, 'edit']" class="btn btn-outline-secondary" title="Edit">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <button *ngIf="isAdmin" class="btn btn-outline-danger" (click)="deleteDoctor(doc.doctorId!, doc.name)" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

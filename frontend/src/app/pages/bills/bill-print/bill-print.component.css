@@ -1,0 +1,25 @@
+.invoice-sheet {
+  max-width: 850px;
+  min-height: 950px;
+}
+
+.hospital-logo-badge {
+  width: 64px;
+  height: 64px;
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+  .d-print-none {
+    display: none !important;
+  }
+  .invoice-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}

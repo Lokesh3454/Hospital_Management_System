@@ -1,0 +1,262 @@
+<div class="container-fluid py-4 px-md-4">
+  <!-- Welcome Banner -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 rounded-4 shadow-sm bg-gradient-patient text-white p-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+          <div>
+            <span class="badge bg-white text-success fw-bold mb-2">Patient Portal</span>
+            <h2 class="fw-bold mb-1">Hello, {{ authService.currentUserValue?.firstName }}!</h2>
+            <p class="text-white-50 mb-0">Your personal health dashboard, appointments, prescriptions, and invoices.</p>
+          </div>
+          <div class="d-flex gap-2">
+            <a routerLink="/appointments/book" class="btn btn-light text-success fw-semibold px-4 py-2 rounded-pill shadow-sm">
+              <i class="bi bi-calendar-plus me-1"></i> Book New Appointment
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notifications -->
+  <div *ngIf="successMessage" class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm mb-4" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i>{{ successMessage }}
+    <button type="button" class="btn-close" (click)="successMessage = ''"></button>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm mb-4" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading && !dashboard" class="text-center py-5">
+    <div class="spinner-border text-success" role="status"></div>
+    <p class="text-muted small mt-2">Loading your patient records...</p>
+  </div>
+
+  <!-- Upcoming Appointment Banner Card -->
+  <div *ngIf="dashboard && dashboard.upcomingAppointment" class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 rounded-4 shadow-sm p-4 bg-primary text-white">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+          <div>
+            <span class="badge bg-white text-primary fw-bold mb-2">Next Upcoming Consultation</span>
+            <h3 class="fw-bold mb-1">Dr. {{ dashboard.upcomingAppointment.doctorName }}</h3>
+            <p class="text-white-50 mb-0">
+              <i class="bi bi-calendar-check me-1"></i>{{ dashboard.upcomingAppointment.appointmentDate }} at {{ dashboard.upcomingAppointment.appointmentTime }}
+              | Specialty: {{ dashboard.upcomingAppointment.doctorSpecialization }}
+            </p>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <a [routerLink]="['/appointments', dashboard.upcomingAppointment.id]" class="btn btn-light text-primary fw-semibold px-4 py-2 rounded-pill shadow-sm">
+              View Appointment Details
+            </a>
+            <a [routerLink]="['/appointments']" [queryParams]="{ filter: 'upcoming', patientId: authService.currentUserValue?.profileId }" class="btn btn-outline-light fw-semibold px-3 py-2 rounded-pill">
+              <i class="bi bi-calendar-week me-1"></i> All Upcoming Visits
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Key Metrics Row -->
+  <div *ngIf="dashboard" class="row g-3 mb-4">
+    <!-- Upcoming Visits -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a [routerLink]="['/appointments']" [queryParams]="{ filter: 'upcoming', patientId: authService.currentUserValue?.profileId }" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Upcoming Visits</div>
+            <h3 class="fw-bold mb-0 text-primary">{{ dashboard.upcomingAppointments }}</h3>
+            <small class="text-primary"><i class="bi bi-calendar-event"></i> Active schedule</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> Upcoming Schedule</div>
+          </div>
+          <div class="stat-icon bg-primary-subtle text-primary">
+            <i class="bi bi-calendar-week fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Appointment History -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a [routerLink]="['/appointments']" [queryParams]="{ filter: 'history', patientId: authService.currentUserValue?.profileId }" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Appointment History</div>
+            <h3 class="fw-bold mb-0 text-dark">{{ dashboard.appointmentHistory }}</h3>
+            <small class="text-muted"><i class="bi bi-clock-history"></i> Completed & past</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> Past Visits History</div>
+          </div>
+          <div class="stat-icon bg-secondary-subtle text-secondary">
+            <i class="bi bi-calendar2-check fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Medical Records -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a [routerLink]="['/medical-records']" [queryParams]="{ patientId: authService.currentUserValue?.profileId }" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Medical Records</div>
+            <h3 class="fw-bold mb-0 text-dark">{{ dashboard.medicalRecords }}</h3>
+            <small class="text-muted">Clinical diagnoses</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> My Health Records</div>
+          </div>
+          <div class="stat-icon bg-info-subtle text-info">
+            <i class="bi bi-file-medical fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Prescriptions -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a [routerLink]="['/prescriptions']" [queryParams]="{ patientId: authService.currentUserValue?.profileId }" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Prescriptions</div>
+            <h3 class="fw-bold mb-0 text-dark">{{ dashboard.prescriptions }}</h3>
+            <small class="text-muted">Issued medications</small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> My Prescriptions</div>
+          </div>
+          <div class="stat-icon bg-danger-subtle text-danger">
+            <i class="bi bi-capsule fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Pending Bills -->
+    <div class="col-12 col-sm-6 col-xl">
+      <a [routerLink]="['/bills']" [queryParams]="{ status: 'PENDING' }" class="card border-0 rounded-4 shadow-sm p-3 stat-card h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small fw-semibold">Pending Bills</div>
+            <h3 class="fw-bold mb-0" [ngClass]="dashboard.pendingBills > 0 ? 'text-warning' : 'text-success'">
+              {{ dashboard.pendingBills }}
+            </h3>
+            <small [ngClass]="dashboard.pendingBills > 0 ? 'text-warning' : 'text-success'">
+              <i class="bi" [ngClass]="dashboard.pendingBills > 0 ? 'bi-exclamation-circle' : 'bi-check-circle'"></i>
+              {{ dashboard.pendingBills > 0 ? 'Payment required' : 'All settled' }}
+            </small>
+            <div class="go-hint"><i class="bi bi-arrow-right-circle"></i> Pay Pending Bills</div>
+          </div>
+          <div class="stat-icon bg-warning-subtle text-warning">
+            <i class="bi bi-receipt fs-4"></i>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Detailed Patient Views -->
+  <div *ngIf="dashboard" class="row g-4">
+    <!-- Pending Invoices Alert Table -->
+    <div class="col-12 col-lg-7">
+      <div class="card border-0 rounded-4 shadow-sm p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold text-dark mb-0">
+            <i class="bi bi-credit-card text-warning me-2"></i>Outstanding Invoices
+          </h5>
+          <a [routerLink]="['/bills']" [queryParams]="{ status: 'PENDING' }" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            View Pending
+          </a>
+        </div>
+
+        <div *ngIf="dashboard.pendingBillsList.length === 0" class="text-center py-4 text-muted small">
+          <i class="bi bi-shield-check d-block fs-2 text-success mb-1"></i>
+          Great! You have no outstanding bills. Everything is settled.
+        </div>
+
+        <div class="table-responsive" *ngIf="dashboard.pendingBillsList.length > 0">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Invoice #</th>
+                <th>Service / Doctor</th>
+                <th>Due Amount</th>
+                <th>Date</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let bill of dashboard.pendingBillsList">
+                <td class="fw-bold font-monospace small">{{ bill.billNumber }}</td>
+                <td>
+                  <div class="fw-semibold text-dark">{{ bill.doctorName || 'Clinical Care' }}</div>
+                  <small class="text-muted">{{ bill.doctorSpecialization || 'OPD' }}</small>
+                </td>
+                <td class="fw-bold text-success">${{ bill.totalAmount | number:'1.2-2' }}</td>
+                <td class="small text-muted">{{ bill.billingDate | date:'mediumDate' }}</td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-success rounded-pill px-3 fw-semibold me-1" (click)="quickPayBill(bill)">
+                    <i class="bi bi-cash-coin me-1"></i> Pay Now
+                  </button>
+                  <a [routerLink]="['/bills', bill.id]" class="btn btn-sm btn-outline-primary rounded-pill px-2">
+                    Invoice
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Navigation & Health Records Shortcut -->
+    <div class="col-12 col-lg-5">
+      <div class="card border-0 rounded-4 shadow-sm p-4 h-100">
+        <h5 class="fw-bold text-dark mb-3">
+          <i class="bi bi-heart-pulse text-danger me-2"></i>My Medical Shortcuts
+        </h5>
+
+        <div class="d-flex flex-column gap-3">
+          <a routerLink="/prescriptions" class="p-3 rounded-4 bg-light border text-decoration-none d-flex align-items-center justify-content-between hover-card">
+            <div class="d-flex align-items-center gap-3">
+              <div class="bg-danger text-white p-3 rounded-3">
+                <i class="bi bi-prescription2 fs-4"></i>
+              </div>
+              <div>
+                <h6 class="fw-bold text-dark mb-1">My Prescriptions</h6>
+                <small class="text-muted">Access doctor prescriptions, dosages, and instructions</small>
+              </div>
+            </div>
+            <i class="bi bi-chevron-right text-muted"></i>
+          </a>
+
+          <a routerLink="/medical-records" class="p-3 rounded-4 bg-light border text-decoration-none d-flex align-items-center justify-content-between hover-card">
+            <div class="d-flex align-items-center gap-3">
+              <div class="bg-info text-white p-3 rounded-3">
+                <i class="bi bi-file-earmark-medical fs-4"></i>
+              </div>
+              <div>
+                <h6 class="fw-bold text-dark mb-1">My Medical Records</h6>
+                <small class="text-muted">Review clinical diagnoses, symptoms, and treatments</small>
+              </div>
+            </div>
+            <i class="bi bi-chevron-right text-muted"></i>
+          </a>
+
+          <a routerLink="/bills" class="p-3 rounded-4 bg-light border text-decoration-none d-flex align-items-center justify-content-between hover-card">
+            <div class="d-flex align-items-center gap-3">
+              <div class="bg-success text-white p-3 rounded-3">
+                <i class="bi bi-receipt fs-4"></i>
+              </div>
+              <div>
+                <h6 class="fw-bold text-dark mb-1">Billing & Invoices</h6>
+                <small class="text-muted">View itemized hospital bills and payment history</small>
+              </div>
+            </div>
+            <i class="bi bi-chevron-right text-muted"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

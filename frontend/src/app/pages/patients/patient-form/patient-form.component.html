@@ -1,0 +1,143 @@
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+      <!-- Breadcrumb Navigation -->
+      <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a routerLink="/patients" class="text-decoration-none">Patients</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{ isEditMode ? 'Edit Patient' : 'New Patient' }}</li>
+        </ol>
+      </nav>
+
+      <div class="card border-0 rounded-4 shadow-sm overflow-hidden">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+          <div>
+            <h4 class="fw-bold mb-0 text-dark">
+              <i class="bi" [ngClass]="isEditMode ? 'bi-pencil-square text-primary' : 'bi-person-plus text-teal'"></i>
+              {{ isEditMode ? 'Update Patient Record' : 'Register New Patient' }}
+            </h4>
+            <small class="text-muted">Enter patient profile, demographics, and contact information</small>
+          </div>
+          <a routerLink="/patients" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-arrow-left me-1"></i> Back
+          </a>
+        </div>
+
+        <div class="card-body p-4 p-md-5">
+          <!-- Notification Alerts -->
+          <div class="alert alert-success d-flex align-items-center mb-4" *ngIf="successMessage">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div>{{ successMessage }}</div>
+          </div>
+          <div class="alert alert-danger d-flex align-items-center mb-4" *ngIf="errorMessage">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div>{{ errorMessage }}</div>
+          </div>
+
+          <div *ngIf="isLoading" class="text-center py-5">
+            <div class="spinner-border text-teal" role="status"></div>
+            <div class="text-muted mt-2">Loading patient record...</div>
+          </div>
+
+          <form [formGroup]="patientForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading">
+            <!-- Patient Name -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold text-secondary small">Full Name *</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="bi bi-person text-muted"></i></span>
+                <input type="text" class="form-control" formControlName="name" placeholder="e.g. Robert Fox"
+                       [class.is-invalid]="patientForm.get('name')?.touched && patientForm.get('name')?.invalid">
+              </div>
+              <div class="text-danger small mt-1" *ngIf="patientForm.get('name')?.touched && patientForm.get('name')?.invalid">
+                Full name is required (min 2 characters).
+              </div>
+            </div>
+
+            <!-- Demographics Row -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold text-secondary small">Date of Birth</label>
+                <input type="date" class="form-control" formControlName="dateOfBirth">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold text-secondary small">Gender *</label>
+                <select class="form-select" formControlName="gender">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold text-secondary small">Blood Group</label>
+                <select class="form-select" formControlName="bloodGroup">
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Contact Information Row -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary small">Phone Number *</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light"><i class="bi bi-telephone text-muted"></i></span>
+                  <input type="text" class="form-control" formControlName="phone" placeholder="+1-555-0123"
+                         [class.is-invalid]="patientForm.get('phone')?.touched && patientForm.get('phone')?.invalid">
+                </div>
+                <div class="text-danger small mt-1" *ngIf="patientForm.get('phone')?.touched && patientForm.get('phone')?.invalid">
+                  Valid phone number is required.
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary small">Email Address *</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light"><i class="bi bi-envelope text-muted"></i></span>
+                  <input type="email" class="form-control" formControlName="email" placeholder="patient@example.com"
+                         [class.is-invalid]="patientForm.get('email')?.touched && patientForm.get('email')?.invalid">
+                </div>
+                <div class="text-danger small mt-1" *ngIf="patientForm.get('email')?.touched && patientForm.get('email')?.invalid">
+                  Valid email address is required.
+                </div>
+              </div>
+            </div>
+
+            <!-- Emergency Contact & Address -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary small">Emergency Contact Phone</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light"><i class="bi bi-telephone-plus text-danger"></i></span>
+                  <input type="text" class="form-control" formControlName="emergencyContact" placeholder="+1-555-0999">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-secondary small">Residential Address</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light"><i class="bi bi-geo-alt text-muted"></i></span>
+                  <input type="text" class="form-control" formControlName="address" placeholder="123 Main St, City, State">
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 border-top pt-4">
+              <a routerLink="/patients" class="btn btn-light px-4 rounded-pill">Cancel</a>
+              <button type="submit" class="btn btn-teal text-white px-5 rounded-pill fw-semibold shadow-sm" [disabled]="isSaving">
+                <span *ngIf="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+                <i *ngIf="!isSaving" class="bi" [ngClass]="isEditMode ? 'bi-check-lg' : 'bi-plus-lg'"></i>
+                {{ isEditMode ? 'Update Patient' : 'Save Patient Record' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
