@@ -308,8 +308,8 @@ Deploy on **Railway**, **Aiven**, or **AWS RDS**:
 2. Set Root Directory to `frontend`.
 3. Set Framework Preset to **Angular**.
 4. Build Command: `npm run build`
-5. Output Directory: `dist/frontend/browser` (or `dist/frontend`)
-6. The included `vercel.json` provides client-side SPA routing rewrites.
+5. Output Directory: `dist/frontend`
+6. The included `vercel.json` automatically redirects all routes to `index.html`.
 7. Update `frontend/src/environments/environment.prod.ts` with your live backend URL:
    ```typescript
    export const environment = {
