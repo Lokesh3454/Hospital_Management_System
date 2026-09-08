@@ -8,7 +8,7 @@ RUN mvn clean package -DskipTests
 # Stage 2: Lightweight Alpine JRE Runtime
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/hms-backend-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/target/*.jar app.jar
 
 ENV PORT=8080
 EXPOSE 8080

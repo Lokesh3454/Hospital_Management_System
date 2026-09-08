@@ -69,7 +69,8 @@ public class SecurityConfig {
                     .requestMatchers("/api/test/doctor").hasRole("DOCTOR")
                     .requestMatchers("/api/test/patient").hasRole("PATIENT")
                     .requestMatchers("/api/test/receptionist").hasRole("RECEPTIONIST")
-                    .anyRequest().authenticated()
+                    .requestMatchers("/api/**").authenticated()
+                    .anyRequest().permitAll()
             );
 
         http.authenticationProvider(authenticationProvider());

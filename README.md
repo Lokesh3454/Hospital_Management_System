@@ -291,32 +291,22 @@ Deploy on **Railway**, **Aiven**, or **AWS RDS**:
 - Set database name: `hospital_management_system`
 - Save JDBC connection URL, username, and password.
 
-### 2. Backend Deployment (Render or Railway)
+### 2. Full-Stack Unified Deployment (Render - 1 Single Service for Everything)
 1. Push repository to GitHub.
-2. In **Render** / **Railway**, create a new Web Service pointing to the root or `backend/` directory.
-3. Configure Environment Variables:
+2. In **Render** (dashboard.render.com), click **New +** ➔ **Web Service**.
+3. Connect repository: `Lokesh3454/Hospital_Management_System`.
+4. Render automatically detects the root multi-stage `Dockerfile`.
+5. Set Environment Variables:
    - `SPRING_DATASOURCE_URL`: `jdbc:mysql://<host>:<port>/<dbname>?useSSL=true&serverTimezone=UTC`
    - `SPRING_DATASOURCE_USERNAME`: `<db_username>`
    - `SPRING_DATASOURCE_PASSWORD`: `<db_password>`
-   - `APP_JWT_SECRET`: `<your-secure-512-bit-secret-key>`
-   - `APP_CORS_ALLOWED_ORIGINS`: `https://your-frontend.vercel.app`
    - `PORT`: `8080`
-4. The deployment will detect `backend/Dockerfile` and deploy the Spring Boot service.
+6. Click **Create Web Service**.
+7. Both Frontend UI and Backend API will be live on your single Render URL (e.g., `https://your-hms.onrender.com`), with zero CORS issues!
 
-### 3. Frontend Deployment (Vercel)
-1. In **Vercel**, import your GitHub repository.
-2. Set Root Directory to `frontend`.
-3. Set Framework Preset to **Angular**.
-4. Build Command: `npm run build`
-5. Output Directory: `dist/frontend`
-6. The included `vercel.json` automatically redirects all routes to `index.html`.
-7. Update `frontend/src/environments/environment.prod.ts` with your live backend URL:
-   ```typescript
-   export const environment = {
-     production: true,
-     apiUrl: 'https://your-backend.onrender.com/api'
-   };
-   ```
+### 3. Alternative: Split Deployment (Frontend on Vercel + Backend on Render)
+- **Frontend on Vercel**: Import repo, set Framework Preset to **Angular**, Output Directory to `dist/frontend`.
+- **Backend on Render**: Point to `backend/` directory with Docker.
 
 ---
 
