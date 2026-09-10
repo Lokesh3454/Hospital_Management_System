@@ -10,28 +10,21 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 import javax.sql.DataSource;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.net.URI;
 
 /**
- * Highly resilient DataSource Configuration that automatically detects and handles
- * local MySQL and cloud database URLs (Railway, Render, etc.).
- * Configures HikariCP with active TCP keepalives and connection validation
- * to completely prevent dropped connection issues and 'Could not open JPA EntityManager' errors.
+ * Robust DataSource Configuration that automatically handles cloud database URLs
+ * (such as Railway or Render format: mysql://user:pass@host:port/database)
+ * and normalizes them into proper JDBC URLs for the MySQL Driver and HikariCP pool.
  */
 @Configuration
 public class DataSourceConfig {
 
     private static final Logger log = LoggerFactory.getLogger(DataSourceConfig.class);
 
-    private static final String DEFAULT_LOCAL_URL = "jdbc:mysql://localhost:3306/hospital_management_system?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&autoReconnect=true";
-    private static final String DEFAULT_LOCAL_USERNAME = "root";
-    private static final String DEFAULT_LOCAL_PASSWORD = "Lokesh@3454";
-
-    private static final String DEFAULT_CLOUD_URL = "jdbc:mysql://hayabusa.proxy.rlwy.net:40465/railway?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&autoReconnect=true";
-    private static final String DEFAULT_CLOUD_USERNAME = "root";
-    private static final String DEFAULT_CLOUD_PASSWORD = "gZGpCIshoBVxfPzuThKBkqFClWNfNEWM";
+    private static final String DEFAULT_URL = "jdbc:mysql://gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?sslMode=VERIFY_IDENTITY&serverTimezone=UTC";
+    private static final String DEFAULT_USERNAME = "3TsxowBqdpQBQyy.root";
+    private static final String DEFAULT_PASSWORD = "GBJCMMsBFQxP2d3I";
 
     @Value("${spring.datasource.url:}")
     private String configuredUrl;
@@ -52,20 +45,18 @@ public class DataSourceConfig {
         String username = configuredUsername;
         String password = configuredPassword;
 
-        // Priority 1: Check environment variables (e.g. Render, Railway, Docker)
-        String envUrl = System.getenv("SPRING_DATASOURCE_URL");
-        if (envUrl == null || envUrl.isBlank()) {
-            envUrl = System.getenv("DATABASE_URL");
+        // Fallback to environment variables if properties are empty
+        if (url == null || url.isBlank()) {
+            url = System.getenv("SPRING_DATASOURCE_URL");
         }
-        if (envUrl == null || envUrl.isBlank()) {
-            envUrl = System.getenv("MYSQL_URL");
+        if (url == null || url.isBlank()) {
+            url = System.getenv("DATABASE_URL");
         }
-
-        if (envUrl != null && !envUrl.isBlank()) {
-            url = envUrl;
+        if (url == null || url.isBlank()) {
+            url = System.getenv("MYSQL_URL");
         }
 
-        // Priority 2: Process and normalize cloud URI format (mysql://user:pass@host:port/db)
+        // Process and normalize URL if provided in standard cloud URI format
         if (url != null && !url.isBlank()) {
             String trimmed = url.trim();
             if (trimmed.startsWith("mysql://") || trimmed.startsWith("mysqls://") || (trimmed.startsWith("jdbc:mysql://") && trimmed.contains("@"))) {
@@ -75,7 +66,7 @@ public class DataSourceConfig {
                     String host = uri.getHost();
                     int port = uri.getPort() > 0 ? uri.getPort() : 3306;
                     String path = uri.getPath();
-                    String db = (path != null && path.length() > 1) ? path.substring(1) : "railway";
+                    String db = (path != null && path.length() > 1) ? path.substring(1) : "test";
 
                     String userInfo = uri.getUserInfo();
                     if (userInfo != null && !userInfo.isBlank()) {
@@ -86,68 +77,44 @@ public class DataSourceConfig {
                         }
                     }
 
-                    url = "jdbc:mysql://" + host + ":" + port + "/" + db
-                            + "?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&autoReconnect=true";
+                    boolean isSslRequired = host != null && (host.contains("tidbcloud") || host.contains("aiven"));
+                    String sslParams = isSslRequired
+                            ? "?sslMode=VERIFY_IDENTITY&serverTimezone=UTC"
+                            : "?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+
+                    url = "jdbc:mysql://" + host + ":" + port + "/" + db + sslParams;
                     log.info("Successfully converted cloud MySQL URL to JDBC format: jdbc:mysql://{}:{}/{}", host, port, db);
                 } catch (Exception e) {
-                    log.warn("Failed to parse cloud datasource URL as URI: {}. Falling back to standard URL handling.", e.getMessage());
+                    log.warn("Failed to parse cloud datasource URL as URI: {}. Falling back to default TiDB URL.", e.getMessage());
+                    url = DEFAULT_URL;
                 }
             } else if (!trimmed.startsWith("jdbc:")) {
                 url = "jdbc:" + trimmed;
             }
         }
 
-        // Priority 3: Dynamic fallback between Local MySQL and Cloud MySQL
-        boolean isLocalUrl = (url != null && (url.contains("localhost") || url.contains("127.0.0.1")));
-        boolean isLocalMySqlUp = isPortOpen("127.0.0.1", 3306, 1200);
-
-        if (isLocalUrl) {
-            if (!isLocalMySqlUp) {
-                log.warn("Local MySQL (127.0.0.1:3306) is not reachable. Automatically falling back to Railway Cloud MySQL.");
-                url = DEFAULT_CLOUD_URL;
-                username = DEFAULT_CLOUD_USERNAME;
-                password = DEFAULT_CLOUD_PASSWORD;
-            } else {
-                log.info("Local MySQL is reachable on port 3306. Using local database.");
-                if (username == null || username.isBlank()) username = DEFAULT_LOCAL_USERNAME;
-                if (password == null || password.isBlank()) password = DEFAULT_LOCAL_PASSWORD;
-            }
-        } else if (url == null || url.isBlank() || !url.startsWith("jdbc:mysql://")) {
-            if (isLocalMySqlUp) {
-                log.info("No valid URL specified, but local MySQL is running on 3306. Using local database.");
-                url = DEFAULT_LOCAL_URL;
-                username = (username != null && !username.isBlank()) ? username : DEFAULT_LOCAL_USERNAME;
-                password = (password != null && !password.isBlank()) ? password : DEFAULT_LOCAL_PASSWORD;
-            } else {
-                log.info("Defaulting to Railway Cloud MySQL.");
-                url = DEFAULT_CLOUD_URL;
-                username = (username != null && !username.isBlank()) ? username : DEFAULT_CLOUD_USERNAME;
-                password = (password != null && !password.isBlank()) ? password : DEFAULT_CLOUD_PASSWORD;
-            }
+        if (url == null || url.isBlank() || !url.startsWith("jdbc:mysql://")) {
+            url = DEFAULT_URL;
+        }
+        if (username == null || username.isBlank()) {
+            username = DEFAULT_USERNAME;
+        }
+        if (password == null || password.isBlank()) {
+            password = DEFAULT_PASSWORD;
         }
 
-        // Ensure autoReconnect is present in URL
-        if (url != null && !url.contains("autoReconnect")) {
-            url += (url.contains("?") ? "&" : "?") + "autoReconnect=true";
-        }
-
-        log.info("Initializing HikariCP DataSource with target database: {}", extractHost(url));
+        log.info("Initializing HikariCP DataSource with target database host: {}", extractHost(url));
 
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(url);
         config.setUsername(username);
         config.setPassword(password);
         config.setDriverClassName(driverClassName != null && !driverClassName.isBlank() ? driverClassName : "com.mysql.cj.jdbc.Driver");
-
-        // Resilient connection pool settings to prevent cloud proxy disconnects
         config.setMaximumPoolSize(10);
-        config.setMinimumIdle(2);
-        config.setIdleTimeout(120000);       // 2 minutes
-        config.setMaxLifetime(600000);        // 10 minutes (prevents cloud proxy silent TCP drops)
-        config.setConnectionTimeout(20000);   // 20 seconds wait for connection
-        config.setValidationTimeout(3000);    // 3 seconds validation timeout
-        config.setKeepaliveTime(30000);       // 30 seconds keepalive ping (critical for Railway/cloud proxies)
-        config.setConnectionTestQuery("SELECT 1");
+        config.setMinimumIdle(10);
+        config.setIdleTimeout(600000);
+        config.setMaxLifetime(1800000);
+        config.setConnectionTimeout(20000);
 
         // High-performance MySQL connection flags
         config.addDataSourceProperty("cachePrepStmts", "true");
@@ -160,21 +127,8 @@ public class DataSourceConfig {
         config.addDataSourceProperty("cacheServerConfiguration", "true");
         config.addDataSourceProperty("elideSetAutoCommits", "true");
         config.addDataSourceProperty("maintainTimeStats", "false");
-        config.addDataSourceProperty("autoReconnect", "true");
-        config.addDataSourceProperty("tcpKeepAlive", "true");
-        config.addDataSourceProperty("connectTimeout", "10000");
-        config.addDataSourceProperty("socketTimeout", "30000");
 
         return new HikariDataSource(config);
-    }
-
-    private boolean isPortOpen(String host, int port, int timeoutMs) {
-        try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(host, port), timeoutMs);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
     }
 
     private String extractHost(String jdbcUrl) {
@@ -185,12 +139,8 @@ public class DataSourceConfig {
                 if (end != -1) {
                     return jdbcUrl.substring(start + 3, end);
                 }
-                int slash = jdbcUrl.indexOf("/", start + 3);
-                if (slash != -1) {
-                    return jdbcUrl.substring(start + 3, slash);
-                }
             }
         } catch (Exception ignored) {}
-        return "database-host";
+        return "tidb-cloud";
     }
 }
