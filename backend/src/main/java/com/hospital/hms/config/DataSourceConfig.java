@@ -61,24 +61,11 @@ public class DataSourceConfig {
             envUrl = System.getenv("MYSQL_URL");
         }
 
-        // Priority 2: Check if local MySQL (127.0.0.1:3306) is available
-        boolean isLocalMySqlUp = isPortOpen("127.0.0.1", 3306, 1200);
-
         if (envUrl != null && !envUrl.isBlank()) {
             url = envUrl;
-        } else if (isLocalMySqlUp && (configuredUrl == null || configuredUrl.isBlank() || configuredUrl.contains("localhost") || configuredUrl.contains("127.0.0.1"))) {
-            log.info("Local MySQL is reachable on port 3306 and no cloud environment variable is set. Using local database.");
-            url = DEFAULT_LOCAL_URL;
-            username = (configuredUsername != null && !configuredUsername.isBlank() && !configuredUsername.equals("root")) ? configuredUsername : DEFAULT_LOCAL_USERNAME;
-            password = (configuredPassword != null && !configuredPassword.isBlank() && !configuredPassword.equals("gZGpCIshoBVxfPzuThKBkqFClWNfNEWM")) ? configuredPassword : DEFAULT_LOCAL_PASSWORD;
-        } else if (!isLocalMySqlUp) {
-            log.info("Local MySQL is not running or running on cloud container (Render/Railway). Using Railway Cloud MySQL.");
-            url = (configuredUrl != null && !configuredUrl.isBlank() && !configuredUrl.contains("localhost") && !configuredUrl.contains("127.0.0.1")) ? configuredUrl : DEFAULT_CLOUD_URL;
-            username = (configuredUsername != null && !configuredUsername.isBlank() && !configuredUsername.equals("root")) ? configuredUsername : DEFAULT_CLOUD_USERNAME;
-            password = (configuredPassword != null && !configuredPassword.isBlank() && !configuredPassword.equals("Lokesh@3454")) ? configuredPassword : DEFAULT_CLOUD_PASSWORD;
         }
 
-        // Priority 3: Process and normalize cloud URI format (mysql://user:pass@host:port/db)
+        // Priority 2: Process and normalize cloud URI format (mysql://user:pass@host:port/db)
         if (url != null && !url.isBlank()) {
             String trimmed = url.trim();
             if (trimmed.startsWith("mysql://") || trimmed.startsWith("mysqls://") || (trimmed.startsWith("jdbc:mysql://") && trimmed.contains("@"))) {
@@ -107,6 +94,35 @@ public class DataSourceConfig {
                 }
             } else if (!trimmed.startsWith("jdbc:")) {
                 url = "jdbc:" + trimmed;
+            }
+        }
+
+        // Priority 3: Dynamic fallback between Local MySQL and Cloud MySQL
+        boolean isLocalUrl = (url != null && (url.contains("localhost") || url.contains("127.0.0.1")));
+        boolean isLocalMySqlUp = isPortOpen("127.0.0.1", 3306, 1200);
+
+        if (isLocalUrl) {
+            if (!isLocalMySqlUp) {
+                log.warn("Local MySQL (127.0.0.1:3306) is not reachable. Automatically falling back to Railway Cloud MySQL.");
+                url = DEFAULT_CLOUD_URL;
+                username = DEFAULT_CLOUD_USERNAME;
+                password = DEFAULT_CLOUD_PASSWORD;
+            } else {
+                log.info("Local MySQL is reachable on port 3306. Using local database.");
+                if (username == null || username.isBlank()) username = DEFAULT_LOCAL_USERNAME;
+                if (password == null || password.isBlank()) password = DEFAULT_LOCAL_PASSWORD;
+            }
+        } else if (url == null || url.isBlank() || !url.startsWith("jdbc:mysql://")) {
+            if (isLocalMySqlUp) {
+                log.info("No valid URL specified, but local MySQL is running on 3306. Using local database.");
+                url = DEFAULT_LOCAL_URL;
+                username = (username != null && !username.isBlank()) ? username : DEFAULT_LOCAL_USERNAME;
+                password = (password != null && !password.isBlank()) ? password : DEFAULT_LOCAL_PASSWORD;
+            } else {
+                log.info("Defaulting to Railway Cloud MySQL.");
+                url = DEFAULT_CLOUD_URL;
+                username = (username != null && !username.isBlank()) ? username : DEFAULT_CLOUD_USERNAME;
+                password = (password != null && !password.isBlank()) ? password : DEFAULT_CLOUD_PASSWORD;
             }
         }
 
