@@ -391,86 +391,187 @@
             </div>
           </div>
 
-          <!-- TAB 2: Direct UPI App Launchers -->
+          <!-- TAB 2: Direct UPI App Launchers & Collect Request -->
           <div *ngIf="activeUpiTab === 'apps'" class="mb-3">
-            <p class="small text-muted mb-2 text-center">
-              Tap any UPI application to open it directly with pre-filled bill details:
-            </p>
-            <div class="row g-2">
+            <!-- Desktop / Mobile Advisory Banner -->
+            <div *ngIf="!isMobile" class="alert alert-info py-2 px-3 rounded-3 small mb-3 border-0 bg-primary-subtle text-primary d-flex align-items-center">
+              <i class="bi bi-laptop fs-5 me-2 flex-shrink-0"></i>
+              <div>
+                <strong>Desktop Browser Detected:</strong> Tap an app below to request payment to your mobile UPI app, or enter your UPI ID to receive a collect request.
+              </div>
+            </div>
+            <div *ngIf="isMobile" class="alert alert-success py-2 px-3 rounded-3 small mb-3 border-0 bg-success-subtle text-success d-flex align-items-center">
+              <i class="bi bi-phone fs-5 me-2 flex-shrink-0"></i>
+              <div>
+                <strong>Mobile Device Detected:</strong> Tap any UPI app below to open it directly with pre-filled bill details.
+              </div>
+            </div>
+
+            <div *ngIf="desktopAppPrompt" class="alert alert-warning py-2 px-3 rounded-3 small mb-3 border-0 bg-warning-subtle text-dark d-flex align-items-center">
+              <i class="bi bi-info-circle-fill text-warning fs-5 me-2 flex-shrink-0"></i>
+              <div>{{ desktopAppPrompt }}</div>
+            </div>
+
+            <!-- App Selection Grid -->
+            <div class="row g-2 mb-3">
               <!-- Google Pay -->
               <div class="col-6">
-                <button
-                  type="button"
-                  class="btn upi-app-btn w-100 p-2 rounded-3 text-start d-flex align-items-center"
-                  (click)="payWithUpiApp('Google Pay', 'tez://upi/pay?')">
-                  <div class="stat-icon bg-light text-danger rounded-circle me-2" style="width: 38px; height: 38px;">
+                <a
+                  [href]="getAppIntentUrl('com.google.android.apps.nbu.paisa.user')"
+                  (click)="onAppClick('Google Pay', 'com.google.android.apps.nbu.paisa.user', $event)"
+                  class="btn upi-app-btn w-100 p-2 rounded-3 text-start d-flex align-items-center text-decoration-none"
+                  [ngClass]="{ 'border-primary shadow-sm bg-primary-subtle': selectedUpiApp === 'Google Pay' }">
+                  <div class="stat-icon bg-light text-danger rounded-circle me-2 flex-shrink-0" style="width: 38px; height: 38px;">
                     <i class="bi bi-google fs-5"></i>
                   </div>
-                  <div>
-                    <div class="fw-bold small text-dark">Google Pay</div>
-                    <small class="text-muted" style="font-size: 0.7rem;">Tap to open</small>
+                  <div class="overflow-hidden">
+                    <div class="fw-bold small text-dark text-truncate">Google Pay</div>
+                    <small class="text-muted d-block" style="font-size: 0.7rem;">
+                      {{ isMobile ? 'Tap to launch' : 'Select app' }}
+                    </small>
                   </div>
-                </button>
+                </a>
               </div>
 
               <!-- PhonePe -->
               <div class="col-6">
-                <button
-                  type="button"
-                  class="btn upi-app-btn w-100 p-2 rounded-3 text-start d-flex align-items-center"
-                  (click)="payWithUpiApp('PhonePe', 'phonepe://pay?')">
-                  <div class="stat-icon bg-light text-primary rounded-circle me-2" style="width: 38px; height: 38px;">
+                <a
+                  [href]="getAppIntentUrl('com.phonepe.app')"
+                  (click)="onAppClick('PhonePe', 'com.phonepe.app', $event)"
+                  class="btn upi-app-btn w-100 p-2 rounded-3 text-start d-flex align-items-center text-decoration-none"
+                  [ngClass]="{ 'border-primary shadow-sm bg-primary-subtle': selectedUpiApp === 'PhonePe' }">
+                  <div class="stat-icon bg-light text-primary rounded-circle me-2 flex-shrink-0" style="width: 38px; height: 38px;">
                     <i class="bi bi-phone-fill fs-5"></i>
                   </div>
-                  <div>
-                    <div class="fw-bold small text-dark">PhonePe</div>
-                    <small class="text-muted" style="font-size: 0.7rem;">Tap to open</small>
+                  <div class="overflow-hidden">
+                    <div class="fw-bold small text-dark text-truncate">PhonePe</div>
+                    <small class="text-muted d-block" style="font-size: 0.7rem;">
+                      {{ isMobile ? 'Tap to launch' : 'Select app' }}
+                    </small>
                   </div>
-                </button>
+                </a>
               </div>
 
               <!-- Paytm -->
               <div class="col-6">
-                <button
-                  type="button"
-                  class="btn upi-app-btn w-100 p-2 rounded-3 text-start d-flex align-items-center"
-                  (click)="payWithUpiApp('Paytm', 'paytmmp://pay?')">
-                  <div class="stat-icon bg-light text-info rounded-circle me-2" style="width: 38px; height: 38px;">
+                <a
+                  [href]="getAppIntentUrl('net.one97.paytm')"
+                  (click)="onAppClick('Paytm', 'net.one97.paytm', $event)"
+                  class="btn upi-app-btn w-100 p-2 rounded-3 text-start d-flex align-items-center text-decoration-none"
+                  [ngClass]="{ 'border-primary shadow-sm bg-primary-subtle': selectedUpiApp === 'Paytm' }">
+                  <div class="stat-icon bg-light text-info rounded-circle me-2 flex-shrink-0" style="width: 38px; height: 38px;">
                     <i class="bi bi-wallet2 fs-5"></i>
                   </div>
-                  <div>
-                    <div class="fw-bold small text-dark">Paytm UPI</div>
-                    <small class="text-muted" style="font-size: 0.7rem;">Tap to open</small>
+                  <div class="overflow-hidden">
+                    <div class="fw-bold small text-dark text-truncate">Paytm UPI</div>
+                    <small class="text-muted d-block" style="font-size: 0.7rem;">
+                      {{ isMobile ? 'Tap to launch' : 'Select app' }}
+                    </small>
                   </div>
-                </button>
+                </a>
               </div>
 
-              <!-- BHIM / Any UPI -->
+              <!-- BHIM / Universal UPI -->
               <div class="col-6">
-                <button
-                  type="button"
-                  class="btn upi-app-btn w-100 p-2 rounded-3 text-start d-flex align-items-center"
-                  (click)="payWithUpiApp('BHIM', 'upi://pay?')">
-                  <div class="stat-icon bg-light text-warning rounded-circle me-2" style="width: 38px; height: 38px;">
+                <a
+                  [href]="getAppIntentUrl('in.org.npci.upiapp')"
+                  (click)="onAppClick('BHIM UPI', 'in.org.npci.upiapp', $event)"
+                  class="btn upi-app-btn w-100 p-2 rounded-3 text-start d-flex align-items-center text-decoration-none"
+                  [ngClass]="{ 'border-primary shadow-sm bg-primary-subtle': selectedUpiApp === 'BHIM UPI' }">
+                  <div class="stat-icon bg-light text-warning rounded-circle me-2 flex-shrink-0" style="width: 38px; height: 38px;">
                     <i class="bi bi-bank fs-5"></i>
                   </div>
-                  <div>
-                    <div class="fw-bold small text-dark">BHIM / Other</div>
-                    <small class="text-muted" style="font-size: 0.7rem;">Default UPI</small>
+                  <div class="overflow-hidden">
+                    <div class="fw-bold small text-dark text-truncate">BHIM / Other</div>
+                    <small class="text-muted d-block" style="font-size: 0.7rem;">
+                      {{ isMobile ? 'Tap to launch' : 'Select app' }}
+                    </small>
                   </div>
-                </button>
+                </a>
               </div>
             </div>
 
-            <!-- Deep link copy button -->
-            <div class="text-center mt-3">
+            <!-- UPI Collect Request Box (Ideal for Desktop & Remote Pay) -->
+            <div class="card border rounded-3 p-3 mb-3 bg-light-subtle">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label fw-bold small text-dark mb-0">
+                  <i class="bi bi-send-check text-primary me-1"></i>Pay via Personal UPI ID (Collect Request)
+                </label>
+                <span class="badge bg-white text-secondary border px-2 py-1 font-monospace" style="font-size: 0.7rem;">
+                  Instant
+                </span>
+              </div>
+              <small class="text-muted d-block mb-2" style="font-size: 0.75rem;">
+                Enter your VPA to send a real-time payment notification directly to your mobile UPI app:
+              </small>
+
+              <div class="input-group input-group-sm mb-2">
+                <span class="input-group-text bg-white"><i class="bi bi-at"></i></span>
+                <input
+                  type="text"
+                  class="form-control font-monospace"
+                  placeholder="e.g. yourname@okhdfcbank"
+                  [(ngModel)]="patientVpa"
+                  [disabled]="isCollectRequestSent"
+                />
+                <button
+                  type="button"
+                  class="btn btn-primary fw-semibold px-3"
+                  (click)="sendCollectRequest()"
+                  [disabled]="isCollectRequestSent">
+                  <i class="bi bi-lightning-fill me-1"></i> Request
+                </button>
+              </div>
+
+              <!-- Quick VPA Handle Suggestions -->
+              <div class="d-flex gap-1 flex-wrap mb-1" *ngIf="!isCollectRequestSent">
+                <small class="text-muted me-1 align-self-center" style="font-size: 0.7rem;">Quick add:</small>
+                <button type="button" class="badge bg-white text-secondary border py-1 px-2 btn btn-link text-decoration-none" (click)="appendVpaSuffix('@okaxis')">&#64;okaxis</button>
+                <button type="button" class="badge bg-white text-secondary border py-1 px-2 btn btn-link text-decoration-none" (click)="appendVpaSuffix('@okhdfcbank')">&#64;okhdfcbank</button>
+                <button type="button" class="badge bg-white text-secondary border py-1 px-2 btn btn-link text-decoration-none" (click)="appendVpaSuffix('@ybl')">&#64;ybl</button>
+                <button type="button" class="badge bg-white text-secondary border py-1 px-2 btn btn-link text-decoration-none" (click)="appendVpaSuffix('@paytm')">&#64;paytm</button>
+                <button type="button" class="badge bg-white text-secondary border py-1 px-2 btn btn-link text-decoration-none" (click)="appendVpaSuffix('@upi')">&#64;upi</button>
+              </div>
+
+              <!-- Active Collect Request Notification State -->
+              <div *ngIf="isCollectRequestSent" class="p-3 bg-white border border-success rounded-3 shadow-sm mt-2">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold">
+                    <i class="bi bi-broadcast me-1"></i> Collect Request Dispatched
+                  </span>
+                  <span class="text-danger fw-bold small font-monospace">
+                    <i class="bi bi-clock me-1"></i>{{ formattedCountdown }}
+                  </span>
+                </div>
+                <p class="small text-dark mb-2">
+                  A payment request of <strong class="text-success">${{ bill.totalAmount | number:'1.2-2' }}</strong> has been forwarded to <strong class="font-monospace text-primary">{{ patientVpa }}</strong>. Please check your UPI notification and approve.
+                </p>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-sm btn-success rounded-pill flex-fill fw-semibold shadow-sm" (click)="approveCollectPayment()">
+                    <i class="bi bi-check2-circle me-1"></i> I Approved in UPI App / Complete Settlement
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" (click)="cancelCollectRequest()">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alternative Quick Actions -->
+            <div class="d-flex justify-content-center gap-2 flex-wrap">
+              <button
+                type="button"
+                class="btn btn-sm btn-light border rounded-pill px-3"
+                (click)="activeUpiTab = 'qr'">
+                <i class="bi bi-qr-code me-1"></i> Switch to QR Code Scanner
+              </button>
               <button
                 type="button"
                 class="btn btn-sm rounded-pill px-3"
                 [ngClass]="copiedLink ? 'btn-success' : 'btn-light border'"
                 (click)="copyUpiLink()">
                 <i class="bi me-1" [ngClass]="copiedLink ? 'bi-check2' : 'bi-link-45deg'"></i>
-                {{ copiedLink ? 'Payment Link Copied!' : 'Copy Universal UPI Link' }}
+                {{ copiedLink ? 'Link Copied!' : 'Copy Universal UPI Link' }}
               </button>
             </div>
           </div>

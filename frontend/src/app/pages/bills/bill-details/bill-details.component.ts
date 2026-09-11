@@ -34,6 +34,15 @@ export class BillDetailsComponent implements OnInit {
   qrImageError = false;
   activeUpiTab: 'qr' | 'apps' = 'qr';
 
+  // Multi-device UPI Apps & Collect Request state
+  isMobile = false;
+  selectedUpiApp = '';
+  desktopAppPrompt = '';
+  patientVpa = '';
+  isCollectRequestSent = false;
+  collectCountdown = 300;
+  collectTimerInterval: any = null;
+
   constructor(
     private route: ActivatedRoute,
     private billService: BillService,
@@ -41,9 +50,16 @@ export class BillDetailsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.detectDevice();
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.loadBill(Number(id));
+    }
+  }
+
+  detectDevice(): void {
+    if (typeof window !== 'undefined' && window.navigator) {
+      this.isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(window.navigator.userAgent);
     }
   }
 
@@ -75,6 +91,14 @@ export class BillDetailsComponent implements OnInit {
     this.copiedLink = false;
     this.qrImageError = false;
     this.activeUpiTab = 'qr';
+    this.selectedUpiApp = '';
+    this.desktopAppPrompt = '';
+    this.isCollectRequestSent = false;
+    this.patientVpa = 'patient@okhdfcbank';
+    if (this.collectTimerInterval) {
+      clearInterval(this.collectTimerInterval);
+      this.collectTimerInterval = null;
+    }
     this.generateSimulatedUtr();
   }
 
@@ -83,6 +107,13 @@ export class BillDetailsComponent implements OnInit {
     this.copiedUpi = false;
     this.copiedLink = false;
     this.utrNumber = '';
+    this.selectedUpiApp = '';
+    this.desktopAppPrompt = '';
+    this.isCollectRequestSent = false;
+    if (this.collectTimerInterval) {
+      clearInterval(this.collectTimerInterval);
+      this.collectTimerInterval = null;
+    }
   }
 
   getUpiPaymentUrl(): string {
@@ -95,6 +126,22 @@ export class BillDetailsComponent implements OnInit {
     const am = encodeURIComponent(Number(this.bill.totalAmount).toFixed(2));
     const cu = 'INR';
     return `upi://pay?pa=${pa}&pn=${pn}&mc=${mc}&tr=${tr}&tn=${tn}&am=${am}&cu=${cu}`;
+  }
+
+  getAppIntentUrl(packageName: string): string {
+    if (!this.bill) return '';
+    const pa = this.hospitalUpiId;
+    const pn = encodeURIComponent(this.hospitalPayeeName);
+    const mc = '8062';
+    const tr = encodeURIComponent(this.bill.billNumber);
+    const tn = encodeURIComponent(`Bill ${this.bill.billNumber} Settlement`);
+    const am = encodeURIComponent(Number(this.bill.totalAmount).toFixed(2));
+    const cu = 'INR';
+
+    if (packageName === 'upi') {
+      return `upi://pay?pa=${pa}&pn=${pn}&mc=${mc}&tr=${tr}&tn=${tn}&am=${am}&cu=${cu}`;
+    }
+    return `intent://pay?pa=${pa}&pn=${pn}&mc=${mc}&tr=${tr}&tn=${tn}&am=${am}&cu=${cu}#Intent;scheme=upi;package=${packageName};end;`;
   }
 
   getQrCodeUrl(): string {
@@ -140,20 +187,68 @@ export class BillDetailsComponent implements OnInit {
     this.utrNumber = `${year}${month}${day}${randomDigits}`;
   }
 
-  payWithUpiApp(appName: string, customScheme?: string): void {
-    const upiUrl = this.getUpiPaymentUrl();
-    if (!upiUrl) return;
+  onAppClick(appName: string, packageName: string, event?: Event): void {
+    this.selectedUpiApp = appName;
+    const intentUrl = this.getAppIntentUrl(packageName);
 
-    let targetUrl = upiUrl;
-    if (customScheme) {
-      targetUrl = upiUrl.replace('upi://', customScheme);
+    if (this.isMobile) {
+      if (event) {
+        setTimeout(() => {
+          window.location.href = intentUrl;
+        }, 100);
+      } else {
+        window.location.href = intentUrl;
+      }
+    } else {
+      if (event) event.preventDefault();
+      const defaultSuffix = appName === 'Google Pay' ? '@okaxis' : appName === 'PhonePe' ? '@ybl' : appName === 'Paytm' ? '@paytm' : '@upi';
+      const baseName = this.patientVpa.split('@')[0] || 'patient';
+      this.patientVpa = baseName + defaultSuffix;
+      this.desktopAppPrompt = `You are on a desktop browser. Enter your UPI ID below to receive a payment request on your ${appName} mobile app, or scan the QR code.`;
     }
+  }
 
-    try {
-      window.location.href = targetUrl;
-    } catch (e) {
-      console.warn('Unable to trigger native UPI app scheme:', e);
+  sendCollectRequest(): void {
+    if (!this.patientVpa || !this.patientVpa.includes('@')) {
+      this.patientVpa = 'patient@okhdfcbank';
     }
+    this.isCollectRequestSent = true;
+    this.generateSimulatedUtr();
+    this.collectCountdown = 300;
+    if (this.collectTimerInterval) clearInterval(this.collectTimerInterval);
+    this.collectTimerInterval = setInterval(() => {
+      if (this.collectCountdown > 0) {
+        this.collectCountdown--;
+      } else {
+        clearInterval(this.collectTimerInterval);
+      }
+    }, 1000);
+  }
+
+  cancelCollectRequest(): void {
+    this.isCollectRequestSent = false;
+    if (this.collectTimerInterval) {
+      clearInterval(this.collectTimerInterval);
+      this.collectTimerInterval = null;
+    }
+  }
+
+  approveCollectPayment(): void {
+    if (!this.utrNumber) {
+      this.generateSimulatedUtr();
+    }
+    this.confirmPayment();
+  }
+
+  appendVpaSuffix(suffix: string): void {
+    const base = this.patientVpa.split('@')[0] || 'patient';
+    this.patientVpa = base + suffix;
+  }
+
+  get formattedCountdown(): string {
+    const mins = Math.floor(this.collectCountdown / 60);
+    const secs = this.collectCountdown % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   }
 
   confirmPayment(): void {
@@ -164,7 +259,9 @@ export class BillDetailsComponent implements OnInit {
     let finalNotes = (this.paymentNotes || '').trim();
     if (this.selectedPaymentMethod === 'UPI') {
       const utr = this.utrNumber.trim() || 'UPI-REF-' + Date.now().toString().slice(-8);
-      finalNotes = finalNotes ? `UPI UTR: ${utr} | ${finalNotes}` : `UPI UTR: ${utr}`;
+      const appInfo = this.selectedUpiApp ? ` via ${this.selectedUpiApp}` : '';
+      const vpaInfo = this.isCollectRequestSent ? ` (Collect: ${this.patientVpa})` : '';
+      finalNotes = finalNotes ? `UPI${appInfo}${vpaInfo} Ref/UTR: ${utr} | ${finalNotes}` : `UPI${appInfo}${vpaInfo} Ref/UTR: ${utr}`;
     }
 
     this.billService.markPaid(this.bill.id, {
