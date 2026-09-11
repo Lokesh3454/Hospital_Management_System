@@ -203,71 +203,357 @@
 
   <!-- Pay Now Modal -->
   <div *ngIf="showPaymentModal && bill" class="modal-backdrop-custom d-flex align-items-center justify-content-center no-print">
-    <div class="modal-dialog-custom card border-0 rounded-4 shadow-lg p-4 bg-white" style="max-width: 480px; width: 100%;">
+    <div class="modal-dialog-custom card border-0 rounded-4 shadow-lg p-3 p-sm-4 bg-white" style="max-width: 540px; width: 100%;">
+      <!-- Header -->
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold mb-0 text-dark">
-          <i class="bi bi-credit-card text-success me-2"></i>Complete Bill Settlement
-        </h5>
-        <button type="button" class="btn-close" (click)="closePaymentModal()"></button>
-      </div>
-
-      <div class="alert alert-light border rounded-3 p-3 mb-3">
-        <div class="d-flex justify-content-between mb-1">
-          <span class="text-muted small">Bill Reference:</span>
-          <span class="fw-bold text-dark font-monospace">{{ bill.billNumber }}</span>
-        </div>
-        <div class="d-flex justify-content-between mb-1">
-          <span class="text-muted small">Patient:</span>
-          <span class="fw-semibold text-dark">{{ bill.patientName }}</span>
-        </div>
-        <div class="d-flex justify-content-between">
-          <span class="text-muted small">Amount to Settle:</span>
-          <span class="fw-bold text-success fs-5">${{ bill.totalAmount | number:'1.2-2' }}</span>
-        </div>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label fw-bold small text-secondary">Choose Payment Gateway / Method</label>
-        <div class="d-flex gap-2">
-          <div class="flex-fill">
-            <input type="radio" class="btn-check" name="detailsPayMethod" id="dPayUPI" value="UPI" [(ngModel)]="selectedPaymentMethod">
-            <label class="btn btn-outline-primary w-100 py-2 rounded-3 text-center" for="dPayUPI">
-              <i class="bi bi-qr-code-scan d-block fs-5 mb-1"></i> UPI
-            </label>
+        <div class="d-flex align-items-center">
+          <div class="stat-icon bg-success-subtle text-success me-2" style="width: 40px; height: 40px;">
+            <i class="bi bi-shield-check fs-5"></i>
           </div>
-          <div class="flex-fill">
-            <input type="radio" class="btn-check" name="detailsPayMethod" id="dPayCard" value="CARD" [(ngModel)]="selectedPaymentMethod">
-            <label class="btn btn-outline-primary w-100 py-2 rounded-3 text-center" for="dPayCard">
-              <i class="bi bi-credit-card d-block fs-5 mb-1"></i> CARD
-            </label>
-          </div>
-          <div class="flex-fill">
-            <input type="radio" class="btn-check" name="detailsPayMethod" id="dPayCash" value="CASH" [(ngModel)]="selectedPaymentMethod">
-            <label class="btn btn-outline-primary w-100 py-2 rounded-3 text-center" for="dPayCash">
-              <i class="bi bi-cash-stack d-block fs-5 mb-1"></i> CASH
-            </label>
+          <div>
+            <h5 class="fw-bold mb-0 text-dark">Settle Medical Invoice</h5>
+            <small class="text-muted">Instant Hospital Settlement Gateway</small>
           </div>
         </div>
+        <button type="button" class="btn-close" (click)="closePaymentModal()" aria-label="Close"></button>
       </div>
 
-      <div class="mb-4">
-        <label class="form-label fw-bold small text-secondary">Reference / Transaction Memo (Optional)</label>
-        <input
-          type="text"
-          class="form-control rounded-3"
-          placeholder="e.g. Card last 4 digits, UPI UTR ref"
-          [(ngModel)]="paymentNotes"
-        />
+      <div class="modal-body-scroll pe-1">
+        <!-- Bill Overview Banner -->
+        <div class="bill-pay-header mb-3 shadow-sm">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <span class="badge bg-white text-primary fw-bold px-2 py-1 font-monospace mb-1">
+                {{ bill.billNumber }}
+              </span>
+              <div class="text-white-50 small">Patient: <span class="text-white fw-semibold">{{ bill.patientName }}</span></div>
+            </div>
+            <div class="text-end">
+              <span class="text-white-50 small d-block">Total Due</span>
+              <span class="fs-4 fw-bold text-white">${{ bill.totalAmount | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Method Tabs -->
+        <div class="mb-3">
+          <label class="form-label fw-bold small text-secondary d-flex justify-content-between">
+            <span>Select Payment Method</span>
+            <span class="text-success small fw-semibold"><i class="bi bi-lightning-charge-fill"></i> Instant Clearance</span>
+          </label>
+          <div class="d-flex gap-2">
+            <div class="flex-fill">
+              <input type="radio" class="btn-check" name="detailsPayMethod" id="dPayUPI" value="UPI" [(ngModel)]="selectedPaymentMethod">
+              <label class="btn btn-outline-primary w-100 py-2 rounded-3 text-center d-flex flex-column align-items-center justify-content-center" for="dPayUPI">
+                <i class="bi bi-qr-code-scan fs-5 mb-1"></i>
+                <span class="fw-bold small">UPI & QR</span>
+              </label>
+            </div>
+            <div class="flex-fill">
+              <input type="radio" class="btn-check" name="detailsPayMethod" id="dPayCard" value="CARD" [(ngModel)]="selectedPaymentMethod">
+              <label class="btn btn-outline-primary w-100 py-2 rounded-3 text-center d-flex flex-column align-items-center justify-content-center" for="dPayCard">
+                <i class="bi bi-credit-card fs-5 mb-1"></i>
+                <span class="fw-bold small">Card</span>
+              </label>
+            </div>
+            <div class="flex-fill">
+              <input type="radio" class="btn-check" name="detailsPayMethod" id="dPayCash" value="CASH" [(ngModel)]="selectedPaymentMethod">
+              <label class="btn btn-outline-primary w-100 py-2 rounded-3 text-center d-flex flex-column align-items-center justify-content-center" for="dPayCash">
+                <i class="bi bi-cash-stack fs-5 mb-1"></i>
+                <span class="fw-bold small">Cash Desk</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- UPI Interactive Payment Area -->
+        <div *ngIf="selectedPaymentMethod === 'UPI'" class="mb-3">
+          <!-- UPI Sub-navigation: Scan QR vs Pay with Apps -->
+          <div class="nav nav-pills nav-fill bg-light p-1 rounded-pill mb-3" role="tablist">
+            <button
+              class="nav-link rounded-pill py-1 small fw-semibold"
+              [class.active]="activeUpiTab === 'qr'"
+              (click)="activeUpiTab = 'qr'"
+              type="button">
+              <i class="bi bi-qr-code me-1"></i> Scan QR Code
+            </button>
+            <button
+              class="nav-link rounded-pill py-1 small fw-semibold"
+              [class.active]="activeUpiTab === 'apps'"
+              (click)="activeUpiTab = 'apps'"
+              type="button">
+              <i class="bi bi-phone me-1"></i> Pay via UPI App
+            </button>
+          </div>
+
+          <!-- TAB 1: QR Code Scanner View -->
+          <div *ngIf="activeUpiTab === 'qr'" class="text-center">
+            <div class="qr-scanner-card p-3 mb-3">
+              <div class="mb-2">
+                <span class="upi-pill-badge">
+                  <i class="bi bi-patch-check-fill text-primary me-1"></i> MedPulse Official Merchant QR
+                </span>
+              </div>
+
+              <!-- Animated QR Container -->
+              <div class="qr-frame my-2 position-relative">
+                <img
+                  *ngIf="!qrImageError"
+                  [src]="getQrCodeUrl()"
+                  (error)="onQrError()"
+                  alt="UPI Payment QR Code"
+                  class="img-fluid"
+                />
+
+                <!-- SVG Fallback QR Pattern -->
+                <svg *ngIf="qrImageError" viewBox="0 0 200 200" width="220" height="220" class="img-fluid rounded">
+                  <rect width="200" height="200" fill="#ffffff"/>
+                  <!-- Position markers -->
+                  <rect x="15" y="15" width="45" height="45" fill="#0d6efd" rx="6"/>
+                  <rect x="23" y="23" width="29" height="29" fill="#ffffff" rx="3"/>
+                  <rect x="28" y="28" width="19" height="19" fill="#0d6efd" rx="2"/>
+
+                  <rect x="140" y="15" width="45" height="45" fill="#0d6efd" rx="6"/>
+                  <rect x="148" y="23" width="29" height="29" fill="#ffffff" rx="3"/>
+                  <rect x="153" y="28" width="19" height="19" fill="#0d6efd" rx="2"/>
+
+                  <rect x="15" y="140" width="45" height="45" fill="#0d6efd" rx="6"/>
+                  <rect x="23" y="148" width="29" height="29" fill="#ffffff" rx="3"/>
+                  <rect x="28" y="153" width="19" height="19" fill="#0d6efd" rx="2"/>
+
+                  <!-- QR Data Mock Matrix -->
+                  <rect x="75" y="20" width="12" height="12" fill="#1e293b"/>
+                  <rect x="95" y="20" width="12" height="12" fill="#1e293b"/>
+                  <rect x="115" y="35" width="12" height="12" fill="#1e293b"/>
+                  <rect x="75" y="55" width="12" height="12" fill="#1e293b"/>
+                  <rect x="95" y="70" width="12" height="12" fill="#1e293b"/>
+                  <rect x="140" y="75" width="12" height="12" fill="#1e293b"/>
+                  <rect x="165" y="75" width="12" height="12" fill="#1e293b"/>
+                  <rect x="20" y="75" width="12" height="12" fill="#1e293b"/>
+                  <rect x="40" y="95" width="12" height="12" fill="#1e293b"/>
+                  <rect x="75" y="95" width="12" height="12" fill="#0d6efd"/>
+                  <rect x="95" y="95" width="12" height="12" fill="#0d6efd"/>
+                  <rect x="115" y="95" width="12" height="12" fill="#0d6efd"/>
+                  <rect x="75" y="115" width="12" height="12" fill="#1e293b"/>
+                  <rect x="140" y="115" width="12" height="12" fill="#1e293b"/>
+                  <rect x="165" y="135" width="12" height="12" fill="#1e293b"/>
+                  <rect x="75" y="150" width="12" height="12" fill="#1e293b"/>
+                  <rect x="100" y="150" width="12" height="12" fill="#1e293b"/>
+                  <rect x="120" y="165" width="12" height="12" fill="#1e293b"/>
+                  <rect x="145" y="165" width="12" height="12" fill="#1e293b"/>
+                </svg>
+
+                <!-- Dynamic Scan Laser -->
+                <div class="qr-scan-line"></div>
+              </div>
+
+              <div class="fw-bold text-dark mt-2 mb-1">
+                Scan & Pay <span class="text-success">${{ bill.totalAmount | number:'1.2-2' }}</span>
+              </div>
+              <small class="text-muted d-block mb-2">
+                Open any UPI app on your mobile phone to scan this QR code
+              </small>
+
+              <!-- Supported UPI Apps Badges -->
+              <div class="d-flex justify-content-center align-items-center gap-2 flex-wrap pt-1">
+                <span class="badge bg-white border text-dark shadow-sm py-1 px-2 small">
+                  <i class="bi bi-google text-danger me-1"></i> GPay
+                </span>
+                <span class="badge bg-white border text-dark shadow-sm py-1 px-2 small">
+                  <i class="bi bi-phone text-primary me-1"></i> PhonePe
+                </span>
+                <span class="badge bg-white border text-dark shadow-sm py-1 px-2 small">
+                  <i class="bi bi-wallet2 text-info me-1"></i> Paytm
+                </span>
+                <span class="badge bg-white border text-dark shadow-sm py-1 px-2 small">
+                  <i class="bi bi-bank text-warning me-1"></i> BHIM
+                </span>
+                <span class="badge bg-white border text-dark shadow-sm py-1 px-2 small">
+                  <i class="bi bi-credit-card-2-front text-secondary me-1"></i> CRED
+                </span>
+              </div>
+            </div>
+
+            <!-- Hospital VPA / Copy Box -->
+            <div class="vpa-copy-box d-flex justify-content-between align-items-center mb-3">
+              <div class="text-start">
+                <small class="text-muted d-block" style="font-size: 0.72rem;">Hospital Official UPI ID (VPA)</small>
+                <span class="font-monospace fw-bold text-dark">{{ hospitalUpiId }}</span>
+              </div>
+              <button
+                type="button"
+                class="btn btn-sm rounded-pill px-3 fw-semibold"
+                [ngClass]="copiedUpi ? 'btn-success' : 'btn-outline-primary'"
+                (click)="copyUpiId()">
+                <i class="bi me-1" [ngClass]="copiedUpi ? 'bi-check2' : 'bi-clipboard'"></i>
+                {{ copiedUpi ? 'Copied!' : 'Copy ID' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- TAB 2: Direct UPI App Launchers -->
+          <div *ngIf="activeUpiTab === 'apps'" class="mb-3">
+            <p class="small text-muted mb-2 text-center">
+              Tap any UPI application to open it directly with pre-filled bill details:
+            </p>
+            <div class="row g-2">
+              <!-- Google Pay -->
+              <div class="col-6">
+                <button
+                  type="button"
+                  class="btn upi-app-btn w-100 p-2 rounded-3 text-start d-flex align-items-center"
+                  (click)="payWithUpiApp('Google Pay', 'tez://upi/pay?')">
+                  <div class="stat-icon bg-light text-danger rounded-circle me-2" style="width: 38px; height: 38px;">
+                    <i class="bi bi-google fs-5"></i>
+                  </div>
+                  <div>
+                    <div class="fw-bold small text-dark">Google Pay</div>
+                    <small class="text-muted" style="font-size: 0.7rem;">Tap to open</small>
+                  </div>
+                </button>
+              </div>
+
+              <!-- PhonePe -->
+              <div class="col-6">
+                <button
+                  type="button"
+                  class="btn upi-app-btn w-100 p-2 rounded-3 text-start d-flex align-items-center"
+                  (click)="payWithUpiApp('PhonePe', 'phonepe://pay?')">
+                  <div class="stat-icon bg-light text-primary rounded-circle me-2" style="width: 38px; height: 38px;">
+                    <i class="bi bi-phone-fill fs-5"></i>
+                  </div>
+                  <div>
+                    <div class="fw-bold small text-dark">PhonePe</div>
+                    <small class="text-muted" style="font-size: 0.7rem;">Tap to open</small>
+                  </div>
+                </button>
+              </div>
+
+              <!-- Paytm -->
+              <div class="col-6">
+                <button
+                  type="button"
+                  class="btn upi-app-btn w-100 p-2 rounded-3 text-start d-flex align-items-center"
+                  (click)="payWithUpiApp('Paytm', 'paytmmp://pay?')">
+                  <div class="stat-icon bg-light text-info rounded-circle me-2" style="width: 38px; height: 38px;">
+                    <i class="bi bi-wallet2 fs-5"></i>
+                  </div>
+                  <div>
+                    <div class="fw-bold small text-dark">Paytm UPI</div>
+                    <small class="text-muted" style="font-size: 0.7rem;">Tap to open</small>
+                  </div>
+                </button>
+              </div>
+
+              <!-- BHIM / Any UPI -->
+              <div class="col-6">
+                <button
+                  type="button"
+                  class="btn upi-app-btn w-100 p-2 rounded-3 text-start d-flex align-items-center"
+                  (click)="payWithUpiApp('BHIM', 'upi://pay?')">
+                  <div class="stat-icon bg-light text-warning rounded-circle me-2" style="width: 38px; height: 38px;">
+                    <i class="bi bi-bank fs-5"></i>
+                  </div>
+                  <div>
+                    <div class="fw-bold small text-dark">BHIM / Other</div>
+                    <small class="text-muted" style="font-size: 0.7rem;">Default UPI</small>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Deep link copy button -->
+            <div class="text-center mt-3">
+              <button
+                type="button"
+                class="btn btn-sm rounded-pill px-3"
+                [ngClass]="copiedLink ? 'btn-success' : 'btn-light border'"
+                (click)="copyUpiLink()">
+                <i class="bi me-1" [ngClass]="copiedLink ? 'bi-check2' : 'bi-link-45deg'"></i>
+                {{ copiedLink ? 'Payment Link Copied!' : 'Copy Universal UPI Link' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- 12-digit UTR Verification Section -->
+          <div class="card border bg-light-subtle rounded-3 p-3 mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="form-label fw-bold small text-dark mb-0">
+                <i class="bi bi-hash text-primary me-1"></i>12-Digit UPI Ref / UTR Number
+              </label>
+              <button
+                type="button"
+                class="btn btn-link btn-sm p-0 text-decoration-none small text-primary fw-semibold"
+                (click)="generateSimulatedUtr()"
+                title="Auto-fill a simulated transaction reference for testing">
+                <i class="bi bi-magic me-1"></i>Demo UTR
+              </button>
+            </div>
+            <input
+              type="text"
+              class="form-control form-control-sm font-monospace rounded-2 mb-2"
+              placeholder="e.g. 526489123045"
+              maxlength="16"
+              [(ngModel)]="utrNumber"
+            />
+            <small class="text-muted" style="font-size: 0.75rem;">
+              <i class="bi bi-info-circle me-1"></i>Found in your UPI app transaction receipt after payment.
+            </small>
+          </div>
+        </div>
+
+        <!-- Card / Cash Fallbacks -->
+        <div *ngIf="selectedPaymentMethod === 'CARD'" class="alert alert-light border rounded-3 p-3 mb-3">
+          <div class="fw-bold small text-dark mb-2"><i class="bi bi-credit-card me-1"></i> Credit / Debit Card Terminal</div>
+          <small class="text-muted d-block mb-3">Online card processing is synchronized with hospital billing desk.</small>
+          <div class="mb-2">
+            <label class="form-label small text-secondary fw-semibold">Cardholder Full Name</label>
+            <input type="text" class="form-control form-control-sm rounded-2" [value]="bill.patientName" />
+          </div>
+          <div class="row g-2">
+            <div class="col-8">
+              <label class="form-label small text-secondary fw-semibold">Card Number</label>
+              <input type="text" class="form-control form-control-sm font-monospace rounded-2" placeholder="•••• •••• •••• ••••" />
+            </div>
+            <div class="col-4">
+              <label class="form-label small text-secondary fw-semibold">Expiry / CVV</label>
+              <input type="text" class="form-control form-control-sm font-monospace rounded-2" placeholder="MM/YY •••" />
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="selectedPaymentMethod === 'CASH'" class="alert alert-light border rounded-3 p-3 mb-3">
+          <div class="fw-bold small text-dark mb-1"><i class="bi bi-cash-stack me-1"></i> Cash Desk Receipt</div>
+          <p class="small text-muted mb-0">
+            For cash payments, please collect physical receipt stamp from Central Billing Counter Room #102.
+          </p>
+        </div>
+
+        <!-- Notes / Remarks -->
+        <div class="mb-3">
+          <label class="form-label fw-bold small text-secondary">Remarks / Counter Reference (Optional)</label>
+          <input
+            type="text"
+            class="form-control form-control-sm rounded-3"
+            placeholder="e.g. Paid from HDFC UPI, Counter token #12"
+            [(ngModel)]="paymentNotes"
+          />
+        </div>
       </div>
 
-      <div class="d-flex gap-2">
+      <!-- Action Footer -->
+      <div class="d-flex gap-2 pt-2 border-top mt-2">
         <button type="button" class="btn btn-light border rounded-pill flex-fill py-2" (click)="closePaymentModal()">
           Cancel
         </button>
-        <button type="button" class="btn btn-success rounded-pill flex-fill py-2 fw-semibold" (click)="confirmPayment()" [disabled]="isProcessingPayment">
+        <button
+          type="button"
+          class="btn btn-success rounded-pill flex-fill py-2 fw-semibold shadow-sm"
+          (click)="confirmPayment()"
+          [disabled]="isProcessingPayment">
           <span *ngIf="isProcessingPayment" class="spinner-border spinner-border-sm me-1"></span>
           <i *ngIf="!isProcessingPayment" class="bi bi-check2-circle me-1"></i>
-          Record Payment
+          {{ selectedPaymentMethod === 'UPI' ? 'Confirm UPI Payment' : 'Complete Settlement' }}
         </button>
       </div>
     </div>

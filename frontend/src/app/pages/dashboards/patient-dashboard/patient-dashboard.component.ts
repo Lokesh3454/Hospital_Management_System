@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { DashboardService } from '../../../core/services/dashboard.service';
 import { BillService } from '../../../core/services/bill.service';
@@ -24,7 +24,8 @@ export class PatientDashboardComponent implements OnInit {
   constructor(
     public authService: AuthService,
     private dashboardService: DashboardService,
-    private billService: BillService
+    private billService: BillService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -49,19 +50,6 @@ export class PatientDashboardComponent implements OnInit {
   }
 
   quickPayBill(bill: Bill): void {
-    this.billService.markPaid(bill.id, {
-      paymentMethod: 'UPI',
-      paymentStatus: 'PAID',
-      notes: 'Paid from patient portal'
-    }).subscribe({
-      next: (updated) => {
-        this.successMessage = `Bill ${updated.billNumber} paid successfully!`;
-        this.loadPatientDashboard();
-        setTimeout(() => this.successMessage = '', 4000);
-      },
-      error: (err) => {
-        this.errorMessage = 'Payment failed: ' + (err.error?.message || err.message);
-      }
-    });
+    this.router.navigate(['/bills'], { queryParams: { payBillId: bill.id } });
   }
 }

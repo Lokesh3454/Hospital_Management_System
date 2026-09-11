@@ -31,6 +31,16 @@ export class BillListComponent implements OnInit {
   paymentNotes = '';
   isProcessingPayment = false;
 
+  // UPI payment configuration & state
+  hospitalUpiId = 'medpulse.hospital@icici';
+  hospitalPayeeName = 'MedPulse Hospital';
+  copiedUpi = false;
+  copiedLink = false;
+  utrNumber = '';
+  qrImageError = false;
+  activeUpiTab: 'qr' | 'apps' = 'qr';
+  pendingPayBillId: number | null = null;
+
   constructor(
     private billService: BillService,
     public authService: AuthService,
@@ -56,6 +66,9 @@ export class BillListComponent implements OnInit {
       if (params['search']) {
         this.searchTerm = params['search'];
       }
+      if (params['payBillId']) {
+        this.pendingPayBillId = Number(params['payBillId']);
+      }
       this.loadBills();
     });
   }
@@ -74,6 +87,15 @@ export class BillListComponent implements OnInit {
         this.bills = bills || [];
         this.filteredBills = [...this.bills];
         this.isLoading = false;
+
+        // Auto-open payment modal if navigated with payBillId
+        if (this.pendingPayBillId) {
+          const target = this.bills.find(b => b.id === this.pendingPayBillId);
+          if (target && (target.paymentStatus === 'PENDING' || target.paymentStatus === 'UNPAID')) {
+            this.openPaymentModal(target);
+          }
+          this.pendingPayBillId = null;
+        }
       },
       error: (err) => {
         this.errorMessage = 'Failed to load bills. ' + (err.error?.message || err.message);
@@ -132,23 +154,109 @@ export class BillListComponent implements OnInit {
     this.selectedBillForPayment = bill;
     this.selectedPaymentMethod = 'UPI';
     this.paymentNotes = '';
+    this.copiedUpi = false;
+    this.copiedLink = false;
+    this.qrImageError = false;
+    this.activeUpiTab = 'qr';
+    this.generateSimulatedUtr();
   }
 
   closePaymentModal(): void {
     this.selectedBillForPayment = null;
+    this.copiedUpi = false;
+    this.copiedLink = false;
+    this.utrNumber = '';
+  }
+
+  getUpiPaymentUrl(): string {
+    if (!this.selectedBillForPayment) return '';
+    const pa = this.hospitalUpiId;
+    const pn = encodeURIComponent(this.hospitalPayeeName);
+    const mc = '8062';
+    const tr = encodeURIComponent(this.selectedBillForPayment.billNumber);
+    const tn = encodeURIComponent(`Bill ${this.selectedBillForPayment.billNumber} Settlement`);
+    const am = encodeURIComponent(Number(this.selectedBillForPayment.totalAmount).toFixed(2));
+    const cu = 'INR';
+    return `upi://pay?pa=${pa}&pn=${pn}&mc=${mc}&tr=${tr}&tn=${tn}&am=${am}&cu=${cu}`;
+  }
+
+  getQrCodeUrl(): string {
+    const upiUri = this.getUpiPaymentUrl();
+    return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=10&data=${encodeURIComponent(upiUri)}`;
+  }
+
+  onQrError(): void {
+    this.qrImageError = true;
+  }
+
+  copyUpiId(): void {
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(this.hospitalUpiId).then(() => {
+        this.copiedUpi = true;
+        setTimeout(() => this.copiedUpi = false, 2500);
+      });
+    } else {
+      this.copiedUpi = true;
+      setTimeout(() => this.copiedUpi = false, 2500);
+    }
+  }
+
+  copyUpiLink(): void {
+    const link = this.getUpiPaymentUrl();
+    if (navigator?.clipboard && link) {
+      navigator.clipboard.writeText(link).then(() => {
+        this.copiedLink = true;
+        setTimeout(() => this.copiedLink = false, 2500);
+      });
+    } else {
+      this.copiedLink = true;
+      setTimeout(() => this.copiedLink = false, 2500);
+    }
+  }
+
+  generateSimulatedUtr(): void {
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2);
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const randomDigits = Math.floor(100000 + Math.random() * 900000);
+    this.utrNumber = `${year}${month}${day}${randomDigits}`;
+  }
+
+  payWithUpiApp(appName: string, customScheme?: string): void {
+    const upiUrl = this.getUpiPaymentUrl();
+    if (!upiUrl) return;
+
+    let targetUrl = upiUrl;
+    if (customScheme) {
+      targetUrl = upiUrl.replace('upi://', customScheme);
+    }
+
+    try {
+      window.location.href = targetUrl;
+    } catch (e) {
+      console.warn('Unable to trigger native UPI app scheme:', e);
+    }
   }
 
   confirmPayment(): void {
     if (!this.selectedBillForPayment) return;
 
     this.isProcessingPayment = true;
+
+    let finalNotes = (this.paymentNotes || '').trim();
+    if (this.selectedPaymentMethod === 'UPI') {
+      const utr = this.utrNumber.trim() || 'UPI-REF-' + Date.now().toString().slice(-8);
+      finalNotes = finalNotes ? `UPI UTR: ${utr} | ${finalNotes}` : `UPI UTR: ${utr}`;
+    }
+
     this.billService.markPaid(this.selectedBillForPayment.id, {
       paymentMethod: this.selectedPaymentMethod,
       paymentStatus: 'PAID',
-      notes: this.paymentNotes
+      notes: finalNotes
     }).subscribe({
       next: (updatedBill) => {
-        this.successMessage = `Payment confirmed for ${updatedBill.billNumber} via ${updatedBill.paymentMethod}!`;
+        this.successMessage = `Payment of $${Number(updatedBill.totalAmount).toFixed(2)} confirmed for ${updatedBill.billNumber} via ${updatedBill.paymentMethod}!`;
         this.isProcessingPayment = false;
         this.closePaymentModal();
         this.loadBills();
