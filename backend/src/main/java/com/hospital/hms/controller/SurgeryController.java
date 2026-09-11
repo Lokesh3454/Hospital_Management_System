@@ -23,6 +23,7 @@ public class SurgeryController {
     private SurgeryService surgeryService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<List<SurgerySchedule>>> getAllSurgeries(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         List<SurgerySchedule> list = (date != null)
@@ -32,6 +33,7 @@ public class SurgeryController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<SurgerySchedule>> getSurgeryById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Surgery schedule retrieved", surgeryService.getSurgeryById(id)));
     }

@@ -52,6 +52,7 @@ export class AnalyticsDashboardComponent implements OnInit {
 
   getMaxRevenue(): number {
     if (!this.analytics || !this.analytics.monthlyTrends || this.analytics.monthlyTrends.length === 0) return 1;
-    return Math.max(...this.analytics.monthlyTrends.map(t => t.revenue || 0));
+    const max = Math.max(...this.analytics.monthlyTrends.map(t => t.revenue || 0));
+    return max > 0 ? max : 1;
   }
 }

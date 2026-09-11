@@ -32,7 +32,7 @@ public class BedServiceImpl implements BedService {
     @Override
     @Transactional(readOnly = true)
     public List<BedDTO> getAllBeds() {
-        return bedRepository.findAll()
+        return bedRepository.findAllWithDetails()
                 .stream()
                 .map(BedDTO::fromEntity)
                 .collect(Collectors.toList());

@@ -49,13 +49,17 @@ public class HmsApplication {
                         }
                     }
 
-                    String jdbcUrl = "jdbc:mysql://" + host + ":" + port + "/" + db
-                            + "?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+                    boolean isSslRequired = host != null && (host.contains("tidbcloud") || host.contains("aiven"));
+                    String sslParams = isSslRequired
+                            ? "?sslMode=VERIFY_IDENTITY&serverTimezone=UTC"
+                            : "?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+
+                    String jdbcUrl = "jdbc:mysql://" + host + ":" + port + "/" + db + sslParams;
 
                     System.setProperty("spring.datasource.url", jdbcUrl);
                     System.setProperty("SPRING_DATASOURCE_URL", jdbcUrl);
                     System.setProperty("spring.datasource.driver-class-name", "com.mysql.cj.jdbc.Driver");
-                    System.out.println("[HMS Boot] Normalized Cloud MySQL URL: jdbc:mysql://" + host + ":" + port + "/" + db);
+                    System.out.println("[HMS Boot] Normalized Cloud MySQL URL: jdbc:mysql://" + host + ":" + port + "/" + db + " (SSL=" + isSslRequired + ")");
                 } catch (Exception e) {
                     System.err.println("[HMS Boot] Could not parse cloud DB URL: " + e.getMessage());
                 }

@@ -32,6 +32,8 @@ public interface AppointmentService {
 
     List<AppointmentResponseDTO> searchAndFilterAppointments(String search, AppointmentStatus status, LocalDate date, Long doctorId, Long patientId);
 
+    List<AppointmentResponseDTO> searchAndFilterAppointments(String search, AppointmentStatus status, LocalDate date, Long doctorId, Long patientId, Long authenticatedUserId);
+
     List<TimeSlotDTO> getAvailableTimeSlots(Long doctorId, LocalDate date);
 
     boolean isDoctorAvailable(Long doctorId, LocalDate date, LocalTime time);

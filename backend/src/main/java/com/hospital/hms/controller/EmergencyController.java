@@ -21,16 +21,19 @@ public class EmergencyController {
     private EmergencyService emergencyService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<List<EmergencyCase>>> getAllCases() {
         return ResponseEntity.ok(ApiResponse.ok("Emergency cases retrieved", emergencyService.getAllCases()));
     }
 
     @GetMapping("/active")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<List<EmergencyCase>>> getActiveCases() {
         return ResponseEntity.ok(ApiResponse.ok("Active trauma and emergency cases retrieved", emergencyService.getActiveCases()));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<EmergencyCase>> getCaseById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Emergency case retrieved", emergencyService.getCaseById(id)));
     }
@@ -46,9 +49,12 @@ public class EmergencyController {
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<EmergencyCase>> updateTriage(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> payload) {
-        String levelStr = (String) payload.get("triageLevel");
-        String notes = (String) payload.get("notes");
+            @RequestBody(required = false) Map<String, Object> payload) {
+        if (payload == null || !payload.containsKey("triageLevel") || payload.get("triageLevel") == null) {
+            throw new com.hospital.hms.exception.BadRequestException("triageLevel is required");
+        }
+        String levelStr = payload.get("triageLevel").toString().toUpperCase();
+        String notes = payload.get("notes") != null ? payload.get("notes").toString() : null;
         EmergencyCase.TriageLevel level = EmergencyCase.TriageLevel.valueOf(levelStr);
         EmergencyCase updated = emergencyService.updateTriage(id, level, notes);
         return ResponseEntity.ok(ApiResponse.ok("Triage scoring updated", updated));
@@ -58,9 +64,12 @@ public class EmergencyController {
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<EmergencyCase>> updateStatus(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> payload) {
-        String statusStr = (String) payload.get("status");
-        String bedNumber = (String) payload.get("assignedBedNumber");
+            @RequestBody(required = false) Map<String, Object> payload) {
+        if (payload == null || !payload.containsKey("status") || payload.get("status") == null) {
+            throw new com.hospital.hms.exception.BadRequestException("status is required");
+        }
+        String statusStr = payload.get("status").toString().toUpperCase();
+        String bedNumber = payload.get("assignedBedNumber") != null ? payload.get("assignedBedNumber").toString() : null;
         EmergencyCase.EmergencyStatus status = EmergencyCase.EmergencyStatus.valueOf(statusStr);
         EmergencyCase updated = emergencyService.updateStatus(id, status, bedNumber);
         return ResponseEntity.ok(ApiResponse.ok("Emergency status updated", updated));

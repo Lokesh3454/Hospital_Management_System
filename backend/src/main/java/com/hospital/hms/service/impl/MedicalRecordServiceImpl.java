@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -42,6 +43,8 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private DoctorAvailabilityRepository doctorAvailabilityRepository;
 
     @Override
     public MedicalRecordResponseDTO createRecord(MedicalRecordRequestDTO request, Long authenticatedUserId) {
@@ -353,8 +356,15 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
                     });
 
                     return doctorRepository.findByUserId(user.getId()).orElseGet(() -> {
-                        Doctor doc = new Doctor(user, specialization, qualification, experience, fee, department, room, "MON,TUE,WED,THU,FRI");
-                        return doctorRepository.save(doc);
+                        Doctor doc = new Doctor(user, specialization, qualification, experience, fee, department, room, "MON,TUE,WED,THU,FRI,SAT");
+                        Doctor saved = doctorRepository.save(doc);
+                        String[] days = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"};
+                        for (String day : days) {
+                            LocalTime start = LocalTime.of(9, 0);
+                            LocalTime end = day.equals("SATURDAY") ? LocalTime.of(14, 0) : LocalTime.of(17, 0);
+                            doctorAvailabilityRepository.save(new DoctorAvailability(saved, day, start, end, true));
+                        }
+                        return saved;
                     });
                 });
     }

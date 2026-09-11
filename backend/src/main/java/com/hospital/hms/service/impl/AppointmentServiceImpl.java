@@ -232,20 +232,44 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AppointmentResponseDTO> searchAndFilterAppointments(String search, AppointmentStatus status, LocalDate date, Long doctorId, Long patientId) {
-        return appointmentRepository.searchAndFilter(search, status, date, doctorId, patientId).stream()
+    public List<AppointmentResponseDTO> searchAndFilterAppointments(String search, AppointmentStatus status, LocalDate date, Long doctorId, Long patientId, Long authenticatedUserId) {
+        Long scopedPatientId = patientId;
+        if (authenticatedUserId != null) {
+            Optional<Patient> loggedInPatient = patientRepository.findByUserId(authenticatedUserId);
+            if (loggedInPatient.isPresent()) {
+                scopedPatientId = loggedInPatient.get().getId();
+            }
+        }
+        return appointmentRepository.searchAndFilter(search, status, date, doctorId, scopedPatientId).stream()
                 .map(AppointmentResponseDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
+    public List<AppointmentResponseDTO> searchAndFilterAppointments(String search, AppointmentStatus status, LocalDate date, Long doctorId, Long patientId) {
+        return searchAndFilterAppointments(search, status, date, doctorId, patientId, null);
+    }
+
+    @Override
+    @Transactional
     public List<TimeSlotDTO> getAvailableTimeSlots(Long doctorId, LocalDate date) {
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with id " + doctorId));
 
         String dayOfWeek = date.getDayOfWeek().name();
         List<DoctorAvailability> availabilities = doctorAvailabilityRepository.findByDoctorId(doctorId);
+
+        if (availabilities.isEmpty()) {
+            String[] defaultDays = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"};
+            for (String day : defaultDays) {
+                LocalTime dStart = LocalTime.of(9, 0);
+                LocalTime dEnd = day.equals("SATURDAY") ? LocalTime.of(14, 0) : LocalTime.of(17, 0);
+                DoctorAvailability da = new DoctorAvailability(doctor, day, dStart, dEnd, true);
+                doctorAvailabilityRepository.save(da);
+            }
+            availabilities = doctorAvailabilityRepository.findByDoctorId(doctorId);
+        }
 
         DoctorAvailability matching = null;
         for (DoctorAvailability a : availabilities) {
@@ -267,7 +291,11 @@ public class AppointmentServiceImpl implements AppointmentService {
                 doctor.getAvailableDays().toUpperCase().contains(dayOfWeek.substring(0, 3)) ||
                 doctor.getAvailableDays().toUpperCase().contains(dayOfWeek))) {
             start = LocalTime.of(9, 0);
-            end = LocalTime.of(17, 0);
+            end = dayOfWeek.equals("SATURDAY") ? LocalTime.of(14, 0) : LocalTime.of(17, 0);
+            dayAvailable = true;
+        } else if (!dayOfWeek.equals("SUNDAY")) {
+            start = LocalTime.of(9, 0);
+            end = dayOfWeek.equals("SATURDAY") ? LocalTime.of(14, 0) : LocalTime.of(17, 0);
             dayAvailable = true;
         } else {
             return Collections.emptyList();
@@ -342,7 +370,10 @@ public class AppointmentServiceImpl implements AppointmentService {
                 doctor.getAvailableDays().toUpperCase().contains(dayOfWeek.substring(0, 3)) ||
                 doctor.getAvailableDays().toUpperCase().contains(dayOfWeek))) {
             start = LocalTime.of(9, 0);
-            end = LocalTime.of(17, 0);
+            end = dayOfWeek.equals("SATURDAY") ? LocalTime.of(14, 0) : LocalTime.of(17, 0);
+        } else if (!dayOfWeek.equals("SUNDAY")) {
+            start = LocalTime.of(9, 0);
+            end = dayOfWeek.equals("SATURDAY") ? LocalTime.of(14, 0) : LocalTime.of(17, 0);
         } else {
             throw new BadRequestException("Doctor is not scheduled to work on " + dayOfWeek);
         }

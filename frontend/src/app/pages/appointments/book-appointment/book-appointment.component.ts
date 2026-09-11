@@ -47,10 +47,16 @@ export class BookAppointmentComponent implements OnInit {
     const today = new Date();
     this.minDate = today.toISOString().split('T')[0];
 
-    // Default to tomorrow or next day
+    // Default to the next working day (skip Sunday)
     const defaultDate = new Date();
     defaultDate.setDate(defaultDate.getDate() + 1);
-    const formattedDefaultDate = defaultDate.toISOString().split('T')[0];
+    if (defaultDate.getDay() === 0) {
+      defaultDate.setDate(defaultDate.getDate() + 1);
+    }
+    const year = defaultDate.getFullYear();
+    const month = String(defaultDate.getMonth() + 1).padStart(2, '0');
+    const day = String(defaultDate.getDate()).padStart(2, '0');
+    const formattedDefaultDate = `${year}-${month}-${day}`;
 
     this.bookingForm = this.fb.group({
       doctorId: ['', [Validators.required]],

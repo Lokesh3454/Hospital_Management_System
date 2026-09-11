@@ -34,6 +34,9 @@ public class AppointmentController {
     @PreAuthorize("hasAnyRole('ADMIN', 'RECEPTIONIST', 'PATIENT')")
     public ResponseEntity<ApiResponse<AppointmentResponseDTO>> bookAppointment(
             @Valid @RequestBody AppointmentRequestDTO request) {
+        if (request.getPatientId() != null) {
+            enforcePatientPrivacy(request.getPatientId());
+        }
         Long authenticatedUserId = getAuthenticatedUserId();
         AppointmentResponseDTO booked = appointmentService.bookAppointment(request, authenticatedUserId);
         return new ResponseEntity<>(ApiResponse.ok("Appointment booked successfully", booked), HttpStatus.CREATED);
@@ -47,7 +50,8 @@ public class AppointmentController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) Long doctorId,
             @RequestParam(required = false) Long patientId) {
-        List<AppointmentResponseDTO> appointments = appointmentService.searchAndFilterAppointments(search, status, date, doctorId, patientId);
+        Long authenticatedUserId = getAuthenticatedUserId();
+        List<AppointmentResponseDTO> appointments = appointmentService.searchAndFilterAppointments(search, status, date, doctorId, patientId, authenticatedUserId);
         return ResponseEntity.ok(ApiResponse.ok("Appointments retrieved successfully", appointments));
     }
 
@@ -91,6 +95,8 @@ public class AppointmentController {
     public ResponseEntity<ApiResponse<AppointmentResponseDTO>> rescheduleAppointment(
             @PathVariable Long id,
             @Valid @RequestBody RescheduleRequestDTO request) {
+        AppointmentResponseDTO existing = appointmentService.getAppointmentById(id);
+        enforcePatientPrivacy(existing.getPatientId());
         AppointmentResponseDTO rescheduled = appointmentService.rescheduleAppointment(id, request);
         return ResponseEntity.ok(ApiResponse.ok("Appointment rescheduled successfully", rescheduled));
     }
@@ -100,6 +106,8 @@ public class AppointmentController {
     public ResponseEntity<ApiResponse<AppointmentResponseDTO>> cancelAppointment(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> payload) {
+        AppointmentResponseDTO existing = appointmentService.getAppointmentById(id);
+        enforcePatientPrivacy(existing.getPatientId());
         String reason = payload != null ? payload.get("reason") : null;
         AppointmentResponseDTO cancelled = appointmentService.cancelAppointment(id, reason);
         return ResponseEntity.ok(ApiResponse.ok("Appointment cancelled successfully", cancelled));

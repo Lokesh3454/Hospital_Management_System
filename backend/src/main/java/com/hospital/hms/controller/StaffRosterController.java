@@ -20,6 +20,7 @@ public class StaffRosterController {
     private StaffRosterService staffRosterService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<List<StaffShift>>> getAllShifts(
             @RequestParam(required = false) String dayOfWeek) {
         List<StaffShift> list = (dayOfWeek != null && !dayOfWeek.isEmpty())
@@ -29,6 +30,7 @@ public class StaffRosterController {
     }
 
     @GetMapping("/on-call")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<List<StaffShift>>> getOnCallSpecialists() {
         return ResponseEntity.ok(ApiResponse.ok("On-call specialists retrieved", staffRosterService.getOnCallSpecialists()));
     }

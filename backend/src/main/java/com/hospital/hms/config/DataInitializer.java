@@ -129,20 +129,19 @@ public class DataInitializer implements CommandLineRunner {
             savedDoctor = doctorRepository.findByUserId(userRepository.findByUsername("doctor_smith").get().getId()).orElse(null);
         }
 
-        // 3.1 Initialize Doctor Availability if not present
-        if (savedDoctor != null && doctorAvailabilityRepository.findByDoctorId(savedDoctor.getId()).isEmpty()) {
-            String[] days = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"};
-            for (String day : days) {
-                DoctorAvailability da = new DoctorAvailability(
-                        savedDoctor,
-                        day,
-                        LocalTime.of(9, 0),
-                        LocalTime.of(17, 0),
-                        true
-                );
-                doctorAvailabilityRepository.save(da);
+        // 3.1 Initialize Doctor Availability for all doctors if not present
+        String[] defaultDays = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"};
+        for (Doctor doc : doctorRepository.findAll()) {
+            if (doctorAvailabilityRepository.findByDoctorId(doc.getId()).isEmpty()) {
+                for (String day : defaultDays) {
+                    LocalTime start = LocalTime.of(9, 0);
+                    LocalTime end = day.equals("SATURDAY") ? LocalTime.of(14, 0) : LocalTime.of(17, 0);
+                    DoctorAvailability da = new DoctorAvailability(doc, day, start, end, true);
+                    doctorAvailabilityRepository.save(da);
+                }
+                logger.info("Seeded default working hours (09:00 - 17:00 MON-FRI, 09:00 - 14:00 SAT) for Dr. {}",
+                        doc.getUser() != null ? doc.getUser().getLastName() : doc.getId());
             }
-            logger.info("Seeded default working hours (09:00 - 17:00 MON-FRI) for Dr. David Smith");
         }
 
         // 4. Initialize Patient

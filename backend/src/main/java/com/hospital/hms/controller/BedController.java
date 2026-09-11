@@ -53,8 +53,16 @@ public class BedController {
     public ResponseEntity<ApiResponse<BedDTO>> assignPatient(
             @PathVariable Long id,
             @RequestBody Map<String, Object> payload) {
-        Long patientId = Long.valueOf(payload.get("patientId").toString());
-        String notes = payload.containsKey("notes") ? (String) payload.get("notes") : "";
+        if (payload == null || !payload.containsKey("patientId") || payload.get("patientId") == null) {
+            throw new com.hospital.hms.exception.BadRequestException("patientId is required to admit a patient to a bed.");
+        }
+        Long patientId;
+        try {
+            patientId = Long.valueOf(payload.get("patientId").toString());
+        } catch (NumberFormatException e) {
+            throw new com.hospital.hms.exception.BadRequestException("Invalid patientId: must be a numeric ID.");
+        }
+        String notes = payload.containsKey("notes") && payload.get("notes") != null ? payload.get("notes").toString() : "";
         BedDTO bed = bedService.assignPatientToBed(id, patientId, notes);
         return ResponseEntity.ok(ApiResponse.ok("Patient admitted to bed successfully", bed));
     }

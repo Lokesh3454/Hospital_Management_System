@@ -32,9 +32,12 @@ public class BloodBankController {
     @PostMapping("/restock")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<BloodInventory>> restockUnits(@RequestBody Map<String, Object> payload) {
-        String bloodGroup = (String) payload.get("bloodGroup");
-        String compTypeStr = (String) payload.get("componentType");
-        int units = ((Number) payload.get("units")).intValue();
+        if (payload == null || !payload.containsKey("bloodGroup") || payload.get("bloodGroup") == null) {
+            throw new com.hospital.hms.exception.BadRequestException("bloodGroup is required to restock blood units.");
+        }
+        String bloodGroup = payload.get("bloodGroup").toString();
+        String compTypeStr = payload.get("componentType") != null ? payload.get("componentType").toString() : null;
+        int units = payload.get("units") instanceof Number ? ((Number) payload.get("units")).intValue() : 1;
         BloodInventory.ComponentType compType = compTypeStr != null
                 ? BloodInventory.ComponentType.valueOf(compTypeStr)
                 : BloodInventory.ComponentType.WHOLE_BLOOD;
@@ -75,8 +78,8 @@ public class BloodBankController {
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_DOCTOR', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<BloodInventory>> issueUnits(
             @PathVariable Long id,
-            @RequestBody Map<String, Integer> payload) {
-        int units = payload.getOrDefault("units", 1);
+            @RequestBody(required = false) Map<String, Integer> payload) {
+        int units = (payload != null && payload.containsKey("units")) ? payload.get("units") : 1;
         BloodInventory updated = bloodBankService.issueUnits(id, units);
         return ResponseEntity.ok(ApiResponse.ok("Blood units issued for clinical transfusion", updated));
     }

@@ -21,24 +21,41 @@ public class InsuranceController {
     @Autowired
     private InsuranceService insuranceService;
 
+    @Autowired
+    private com.hospital.hms.repository.PatientRepository patientRepository;
+
     @GetMapping
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<List<InsuranceClaim>>> getAllClaims() {
         return ResponseEntity.ok(ApiResponse.ok("Insurance claims retrieved", insuranceService.getAllClaims()));
     }
 
     @GetMapping("/patient/{patientId}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_RECEPTIONIST', 'ROLE_PATIENT')")
     public ResponseEntity<ApiResponse<List<InsuranceClaim>>> getClaimsByPatient(@PathVariable Long patientId) {
+        enforcePatientPrivacy(patientId);
         return ResponseEntity.ok(ApiResponse.ok("Patient claims retrieved", insuranceService.getClaimsByPatient(patientId)));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_RECEPTIONIST', 'ROLE_PATIENT')")
     public ResponseEntity<ApiResponse<InsuranceClaim>> getClaimById(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.ok("Claim retrieved", insuranceService.getClaimById(id)));
+        InsuranceClaim claim = insuranceService.getClaimById(id);
+        if (claim.getPatientId() != null) {
+            enforcePatientPrivacy(claim.getPatientId());
+        }
+        return ResponseEntity.ok(ApiResponse.ok("Claim retrieved", claim));
     }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_RECEPTIONIST', 'ROLE_PATIENT')")
     public ResponseEntity<ApiResponse<InsuranceClaim>> submitClaim(@RequestBody InsuranceClaim claim) {
+        if (claim == null) {
+            throw new com.hospital.hms.exception.BadRequestException("Insurance claim body is required");
+        }
+        if (claim.getPatientId() != null) {
+            enforcePatientPrivacy(claim.getPatientId());
+        }
         InsuranceClaim created = insuranceService.submitClaim(claim);
         return new ResponseEntity<>(ApiResponse.ok("Insurance claim submitted for pre-authorization", created), HttpStatus.CREATED);
     }
@@ -47,13 +64,16 @@ public class InsuranceController {
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<InsuranceClaim>> updateClaimStatus(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> payload) {
-        String statusStr = (String) payload.get("status");
+            @RequestBody(required = false) Map<String, Object> payload) {
+        if (payload == null || !payload.containsKey("status") || payload.get("status") == null) {
+            throw new com.hospital.hms.exception.BadRequestException("status is required");
+        }
+        String statusStr = payload.get("status").toString().toUpperCase();
         BigDecimal approvedAmount = payload.get("approvedAmount") != null
                 ? new BigDecimal(payload.get("approvedAmount").toString()) : null;
         BigDecimal patientCoPay = payload.get("patientCoPay") != null
                 ? new BigDecimal(payload.get("patientCoPay").toString()) : null;
-        String notes = (String) payload.get("notes");
+        String notes = payload.get("notes") != null ? payload.get("notes").toString() : null;
 
         InsuranceClaim.ClaimStatus status = InsuranceClaim.ClaimStatus.valueOf(statusStr);
         InsuranceClaim updated = insuranceService.updateClaimStatus(id, status, approvedAmount, patientCoPay, notes);
@@ -76,5 +96,22 @@ public class InsuranceController {
         }
         InsuranceClaim updated = insuranceService.updateClaimStatus(id, claimStatus, approvedAmount, patientCoPay, notes);
         return ResponseEntity.ok(ApiResponse.ok("Pre-authorization updated successfully", updated));
+    }
+
+    private void enforcePatientPrivacy(Long requestedPatientId) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.hospital.hms.security.services.UserDetailsImpl userDetails) {
+            boolean isStaff = auth.getAuthorities().stream().anyMatch(a ->
+                    a.getAuthority().equals("ROLE_ADMIN") ||
+                    a.getAuthority().equals("ROLE_DOCTOR") ||
+                    a.getAuthority().equals("ROLE_RECEPTIONIST"));
+            if (!isStaff) {
+                com.hospital.hms.entity.Patient currentPatient = patientRepository.findByUserId(userDetails.getId())
+                        .orElseThrow(() -> new com.hospital.hms.exception.BadRequestException("No patient profile found for this account."));
+                if (!currentPatient.getId().equals(requestedPatientId)) {
+                    throw new com.hospital.hms.exception.BadRequestException("Access denied: You can only view your own insurance claims.");
+                }
+            }
+        }
     }
 }

@@ -15,4 +15,7 @@ public interface BedRepository extends JpaRepository<Bed, Long> {
     List<Bed> findByWardType(WardType wardType);
     Optional<Bed> findByCurrentPatientId(Long patientId);
     long countByStatus(BedStatus status);
+
+    @org.springframework.data.jpa.repository.Query("SELECT b FROM Bed b LEFT JOIN FETCH b.currentPatient p LEFT JOIN FETCH p.user ORDER BY b.id ASC")
+    List<Bed> findAllWithDetails();
 }

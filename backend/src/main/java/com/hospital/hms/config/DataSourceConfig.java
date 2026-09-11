@@ -22,9 +22,9 @@ public class DataSourceConfig {
 
     private static final Logger log = LoggerFactory.getLogger(DataSourceConfig.class);
 
-    private static final String DEFAULT_URL = "jdbc:mysql://gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?sslMode=VERIFY_IDENTITY&serverTimezone=UTC";
-    private static final String DEFAULT_USERNAME = "3TsxowBqdpQBQyy.root";
-    private static final String DEFAULT_PASSWORD = "GBJCMMsBFQxP2d3I";
+    private static final String DEFAULT_URL = "jdbc:mysql://localhost:3306/hospital_management_system?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+    private static final String DEFAULT_USERNAME = "root";
+    private static final String DEFAULT_PASSWORD = "";
 
     @Value("${spring.datasource.url:}")
     private String configuredUrl;
@@ -85,7 +85,7 @@ public class DataSourceConfig {
                     url = "jdbc:mysql://" + host + ":" + port + "/" + db + sslParams;
                     log.info("Successfully converted cloud MySQL URL to JDBC format: jdbc:mysql://{}:{}/{}", host, port, db);
                 } catch (Exception e) {
-                    log.warn("Failed to parse cloud datasource URL as URI: {}. Falling back to default TiDB URL.", e.getMessage());
+                    log.warn("Failed to parse cloud datasource URL as URI: {}. Falling back to default URL.", e.getMessage());
                     url = DEFAULT_URL;
                 }
             } else if (!trimmed.startsWith("jdbc:")) {
@@ -141,6 +141,6 @@ public class DataSourceConfig {
                 }
             }
         } catch (Exception ignored) {}
-        return "tidb-cloud";
+        return "localhost";
     }
 }

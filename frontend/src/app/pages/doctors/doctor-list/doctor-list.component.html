@@ -118,11 +118,14 @@
         </div>
 
         <div class="mt-auto d-flex gap-2">
-          <a [routerLink]="['/doctors', doc.doctorId]" class="btn btn-outline-primary btn-sm flex-grow-1 rounded-pill">
-            <i class="bi bi-person-lines-fill me-1"></i> Profile
+          <a [routerLink]="['/appointments/book']" [queryParams]="{ doctorId: doc.doctorId }" class="btn btn-primary btn-sm flex-grow-1 rounded-pill fw-semibold">
+            <i class="bi bi-calendar-plus me-1"></i> Book Visit
           </a>
-          <a [routerLink]="['/doctors', doc.doctorId, 'availability']" class="btn btn-outline-success btn-sm rounded-pill px-3" title="Manage Schedule">
-            <i class="bi bi-calendar-week me-1"></i> Schedule
+          <a [routerLink]="['/doctors', doc.doctorId]" class="btn btn-outline-secondary btn-sm rounded-pill px-3" title="Profile Details">
+            <i class="bi bi-person-lines-fill"></i>
+          </a>
+          <a [routerLink]="['/doctors', doc.doctorId, 'availability']" class="btn btn-outline-success btn-sm rounded-pill px-3" title="Consultation Schedule">
+            <i class="bi bi-calendar-week"></i>
           </a>
           <a *ngIf="isAdmin" [routerLink]="['/doctors', doc.doctorId, 'edit']" class="btn btn-outline-secondary btn-sm rounded-pill" title="Edit Doctor">
             <i class="bi bi-pencil"></i>
@@ -177,7 +180,10 @@
             </td>
             <td class="text-end pe-4">
               <div class="btn-group btn-group-sm">
-                <a [routerLink]="['/doctors', doc.doctorId]" class="btn btn-outline-primary" title="View Profile">
+                <a [routerLink]="['/appointments/book']" [queryParams]="{ doctorId: doc.doctorId }" class="btn btn-primary" title="Book Appointment">
+                  <i class="bi bi-calendar-plus"></i>
+                </a>
+                <a [routerLink]="['/doctors', doc.doctorId]" class="btn btn-outline-secondary" title="View Profile">
                   <i class="bi bi-eye"></i>
                 </a>
                 <a [routerLink]="['/doctors', doc.doctorId, 'availability']" class="btn btn-outline-success" title="Schedule">

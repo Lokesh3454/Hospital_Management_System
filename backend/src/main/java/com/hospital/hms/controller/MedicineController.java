@@ -68,7 +68,15 @@ public class MedicineController {
     public ResponseEntity<ApiResponse<MedicineDTO>> adjustStock(
             @PathVariable Long id,
             @RequestBody Map<String, Object> payload) {
-        Integer delta = Integer.valueOf(payload.get("delta").toString());
+        if (payload == null || !payload.containsKey("delta") || payload.get("delta") == null) {
+            throw new com.hospital.hms.exception.BadRequestException("delta value is required to adjust medicine stock.");
+        }
+        Integer delta;
+        try {
+            delta = Integer.valueOf(payload.get("delta").toString());
+        } catch (NumberFormatException e) {
+            throw new com.hospital.hms.exception.BadRequestException("Invalid delta: must be an integer.");
+        }
         MedicineDTO updated = medicineService.adjustStock(id, delta);
         return ResponseEntity.ok(ApiResponse.ok("Medicine stock updated successfully", updated));
     }

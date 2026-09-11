@@ -3,7 +3,11 @@
   "outputDirectory": "dist/frontend",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/:match*",
+      "destination": "https://hospital-management-system-fbmw.onrender.com/api/:match*"
+    },
+    {
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ],

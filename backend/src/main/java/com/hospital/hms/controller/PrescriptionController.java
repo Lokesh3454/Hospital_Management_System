@@ -68,9 +68,32 @@ public class PrescriptionController {
         return ResponseEntity.ok(ApiResponse.ok("Doctor prescriptions retrieved successfully", list));
     }
 
+    @Autowired
+    private com.hospital.hms.repository.AppointmentRepository appointmentRepository;
+
+    @Autowired
+    private com.hospital.hms.repository.PatientRepository patientRepository;
+
     @GetMapping("/appointment/{appointmentId}")
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'RECEPTIONIST', 'PATIENT')")
     public ResponseEntity<ApiResponse<List<PrescriptionResponseDTO>>> getAppointmentPrescriptions(@PathVariable Long appointmentId) {
+        Long authenticatedUserId = getAuthenticatedUserId();
+        if (authenticatedUserId != null) {
+            org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            boolean isStaff = auth.getAuthorities().stream().anyMatch(a ->
+                    a.getAuthority().equals("ROLE_ADMIN") ||
+                    a.getAuthority().equals("ROLE_DOCTOR") ||
+                    a.getAuthority().equals("ROLE_RECEPTIONIST"));
+            if (!isStaff) {
+                com.hospital.hms.entity.Patient currentPatient = patientRepository.findByUserId(authenticatedUserId)
+                        .orElseThrow(() -> new com.hospital.hms.exception.BadRequestException("No patient profile found for this account."));
+                com.hospital.hms.entity.Appointment appt = appointmentRepository.findById(appointmentId)
+                        .orElseThrow(() -> new com.hospital.hms.exception.ResourceNotFoundException("Appointment not found with id: " + appointmentId));
+                if (!appt.getPatient().getId().equals(currentPatient.getId())) {
+                    throw new com.hospital.hms.exception.BadRequestException("Access denied: You can only view prescriptions for your own appointments.");
+                }
+            }
+        }
         List<PrescriptionResponseDTO> list = prescriptionService.getAppointmentPrescriptions(appointmentId);
         return ResponseEntity.ok(ApiResponse.ok("Appointment prescriptions retrieved successfully", list));
     }

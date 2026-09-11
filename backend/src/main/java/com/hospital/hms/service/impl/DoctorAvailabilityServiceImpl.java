@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,12 +26,25 @@ public class DoctorAvailabilityServiceImpl implements DoctorAvailabilityService 
     private DoctorRepository doctorRepository;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<DoctorAvailabilityDTO> getAvailabilitiesByDoctorId(Long doctorId) {
-        if (!doctorRepository.existsById(doctorId)) {
-            throw new ResourceNotFoundException("Doctor not found with id: " + doctorId);
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with id: " + doctorId));
+        
+        List<DoctorAvailability> list = availabilityRepository.findByDoctorId(doctorId);
+        if (list.isEmpty()) {
+            String[] defaultDays = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"};
+            List<DoctorAvailability> initialized = new java.util.ArrayList<>();
+            for (String day : defaultDays) {
+                LocalTime start = LocalTime.of(9, 0);
+                LocalTime end = day.equals("SATURDAY") ? LocalTime.of(14, 0) : LocalTime.of(17, 0);
+                DoctorAvailability da = new DoctorAvailability(doctor, day, start, end, true);
+                initialized.add(availabilityRepository.save(da));
+            }
+            list = initialized;
         }
-        return availabilityRepository.findByDoctorId(doctorId).stream()
+
+        return list.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }

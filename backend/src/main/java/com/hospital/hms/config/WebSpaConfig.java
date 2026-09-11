@@ -19,6 +19,9 @@ public class WebSpaConfig implements WebMvcConfigurer {
                 .addResolver(new PathResourceResolver() {
                     @Override
                     protected Resource getResource(String resourcePath, Resource location) throws IOException {
+                        if (resourcePath.startsWith("api") || resourcePath.startsWith("/api")) {
+                            return null;
+                        }
                         Resource requestedResource = location.createRelative(resourcePath);
                         return requestedResource.exists() && requestedResource.isReadable()
                                 ? requestedResource

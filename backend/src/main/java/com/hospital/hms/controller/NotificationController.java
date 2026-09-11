@@ -20,6 +20,7 @@ public class NotificationController {
     private NotificationService notificationService;
 
     @GetMapping({"", "/recent"})
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_RECEPTIONIST')")
     public ResponseEntity<ApiResponse<List<NotificationLog>>> getRecentLogs() {
         return ResponseEntity.ok(ApiResponse.ok("Notification dispatch outbox retrieved", notificationService.getRecentLogs()));
     }

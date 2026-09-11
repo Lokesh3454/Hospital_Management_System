@@ -26,9 +26,13 @@ public class VitalsController {
         return new ResponseEntity<>(ApiResponse.ok("Vitals recorded successfully", saved), HttpStatus.CREATED);
     }
 
+    @Autowired
+    private com.hospital.hms.repository.PatientRepository patientRepository;
+
     @GetMapping("/patient/{patientId}")
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'RECEPTIONIST', 'PATIENT')")
     public ResponseEntity<ApiResponse<List<VitalsDTO>>> getPatientVitals(@PathVariable Long patientId) {
+        enforcePatientPrivacy(patientId);
         List<VitalsDTO> list = vitalsService.getVitalsByPatient(patientId);
         return ResponseEntity.ok(ApiResponse.ok("Vitals history retrieved successfully", list));
     }
@@ -36,6 +40,7 @@ public class VitalsController {
     @GetMapping("/patient/{patientId}/latest")
     @PreAuthorize("hasAnyRole('DOCTOR', 'ADMIN', 'RECEPTIONIST', 'PATIENT')")
     public ResponseEntity<ApiResponse<VitalsDTO>> getLatestVitals(@PathVariable Long patientId) {
+        enforcePatientPrivacy(patientId);
         VitalsDTO latest = vitalsService.getLatestVitalsByPatient(patientId);
         return ResponseEntity.ok(ApiResponse.ok("Latest vitals retrieved successfully", latest));
     }
@@ -45,5 +50,22 @@ public class VitalsController {
     public ResponseEntity<ApiResponse<Void>> deleteVitals(@PathVariable Long id) {
         vitalsService.deleteVitals(id);
         return ResponseEntity.ok(ApiResponse.ok("Vitals record deleted successfully", null));
+    }
+
+    private void enforcePatientPrivacy(Long requestedPatientId) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.hospital.hms.security.services.UserDetailsImpl userDetails) {
+            boolean isStaff = auth.getAuthorities().stream().anyMatch(a ->
+                    a.getAuthority().equals("ROLE_ADMIN") ||
+                    a.getAuthority().equals("ROLE_DOCTOR") ||
+                    a.getAuthority().equals("ROLE_RECEPTIONIST"));
+            if (!isStaff) {
+                com.hospital.hms.entity.Patient currentPatient = patientRepository.findByUserId(userDetails.getId())
+                        .orElseThrow(() -> new com.hospital.hms.exception.BadRequestException("No patient profile found for this account."));
+                if (!currentPatient.getId().equals(requestedPatientId)) {
+                    throw new com.hospital.hms.exception.BadRequestException("Access denied: You can only view your own vitals.");
+                }
+            }
+        }
     }
 }

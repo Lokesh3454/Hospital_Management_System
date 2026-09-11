@@ -20,6 +20,9 @@ public class LabTestController {
     @Autowired
     private LabTestService labTestService;
 
+    @Autowired
+    private com.hospital.hms.repository.PatientRepository patientRepository;
+
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'RECEPTIONIST')")
     public ResponseEntity<ApiResponse<List<LabTestDTO>>> getAllLabTests() {
@@ -31,12 +34,16 @@ public class LabTestController {
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'RECEPTIONIST', 'PATIENT')")
     public ResponseEntity<ApiResponse<LabTestDTO>> getLabTestById(@PathVariable Long id) {
         LabTestDTO dto = labTestService.getLabTestById(id);
+        if (dto.getPatientId() != null) {
+            enforcePatientPrivacy(dto.getPatientId());
+        }
         return ResponseEntity.ok(ApiResponse.ok("Diagnostic test retrieved successfully", dto));
     }
 
     @GetMapping("/patient/{patientId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR', 'RECEPTIONIST', 'PATIENT')")
     public ResponseEntity<ApiResponse<List<LabTestDTO>>> getPatientLabTests(@PathVariable Long patientId) {
+        enforcePatientPrivacy(patientId);
         List<LabTestDTO> list = labTestService.getLabTestsByPatient(patientId);
         return ResponseEntity.ok(ApiResponse.ok("Patient diagnostic orders retrieved successfully", list));
     }
@@ -82,5 +89,22 @@ public class LabTestController {
     public ResponseEntity<ApiResponse<Void>> deleteLabTest(@PathVariable Long id) {
         labTestService.deleteLabTest(id);
         return ResponseEntity.ok(ApiResponse.ok("Lab test order deleted successfully", null));
+    }
+
+    private void enforcePatientPrivacy(Long requestedPatientId) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.hospital.hms.security.services.UserDetailsImpl userDetails) {
+            boolean isStaff = auth.getAuthorities().stream().anyMatch(a ->
+                    a.getAuthority().equals("ROLE_ADMIN") ||
+                    a.getAuthority().equals("ROLE_DOCTOR") ||
+                    a.getAuthority().equals("ROLE_RECEPTIONIST"));
+            if (!isStaff) {
+                com.hospital.hms.entity.Patient currentPatient = patientRepository.findByUserId(userDetails.getId())
+                        .orElseThrow(() -> new com.hospital.hms.exception.BadRequestException("No patient profile found for this account."));
+                if (!currentPatient.getId().equals(requestedPatientId)) {
+                    throw new com.hospital.hms.exception.BadRequestException("Access denied: You can only view your own lab tests.");
+                }
+            }
+        }
     }
 }
